@@ -4,22 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Dla Kochanej Wiktorii</title>
-  <meta name="description" content="Rozkwitający bukiet kwiatów stworzony z kodu — Dla Kochanej Wiktorii." />
+  <meta name="description" content="Obracający się bukiet kwiatów 3D stworzony z kodu — Dla Kochanej Wiktorii." />
   <meta property="og:title" content="Dla Kochanej Wiktorii 🌸" />
-  <meta property="og:description" content="Animowany bukiet kwiatów stworzony z kodu." />
-  <meta name="theme-color" content="#060711" />
+  <meta property="og:description" content="Interaktywny, obracający się bukiet kwiatów 3D w ASCII." />
+  <meta name="theme-color" content="#04050c" />
   <link
     rel="icon"
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23080915'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='36'%3E%F0%9F%8C%B8%3C/text%3E%3C/svg%3E"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070812'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='36'%3E%F0%9F%8C%B8%3C/text%3E%3C/svg%3E"
   />
   <style>
     :root {
-      --bg-top: #05060f;
-      --bg-mid: #0a0c1b;
-      --bg-bot: #100817;
+      --bg-top: #03040a;
+      --bg-mid: #080915;
+      --bg-bot: #0e0713;
       --ui-text: rgba(255, 224, 238, 0.78);
       --ui-border: rgba(255, 182, 213, 0.22);
-      --ui-bg: rgba(16, 14, 28, 0.58);
+      --ui-bg: rgba(14, 12, 24, 0.58);
     }
 
     * {
@@ -34,13 +34,13 @@
       height: 100%;
       overflow: hidden;
       background:
-        radial-gradient(ellipse 64% 52% at 50% 42%, rgba(72, 24, 62, 0.30) 0%, rgba(18, 22, 52, 0.16) 48%, transparent 78%),
-        radial-gradient(ellipse 46% 32% at 50% 84%, rgba(132, 42, 82, 0.16) 0%, transparent 72%),
+        radial-gradient(ellipse 56% 48% at 50% 42%, rgba(86, 22, 66, 0.24) 0%, rgba(18, 18, 48, 0.14) 50%, transparent 78%),
+        radial-gradient(ellipse 40% 26% at 50% 84%, rgba(128, 36, 78, 0.15) 0%, transparent 72%),
         linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 56%, var(--bg-bot) 100%);
       color: #fff;
       font-family: "JetBrains Mono", "Fira Code", "Cascadia Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
       -webkit-font-smoothing: antialiased;
-      touch-action: manipulation;
+      touch-action: none;
       user-select: none;
     }
 
@@ -50,7 +50,11 @@
       width: 100%;
       height: 100%;
       display: block;
-      cursor: pointer;
+      cursor: grab;
+    }
+
+    #stage.dragging {
+      cursor: grabbing;
     }
 
     .controls {
@@ -60,7 +64,7 @@
       display: flex;
       gap: 8px;
       z-index: 10;
-      opacity: 0.45;
+      opacity: 0.48;
       transition: opacity 0.35s ease;
     }
 
@@ -86,9 +90,9 @@
     }
 
     .btn:hover {
-      background: rgba(255, 132, 185, 0.20);
-      border-color: rgba(255, 182, 213, 0.50);
-      color: #fff4f9;
+      background: rgba(255, 130, 184, 0.22);
+      border-color: rgba(255, 186, 218, 0.52);
+      color: #fff5fa;
     }
 
     .btn:active {
@@ -101,16 +105,16 @@
       bottom: 18px;
       font-size: 11px;
       letter-spacing: 0.04em;
-      color: rgba(255, 214, 232, 0.34);
+      color: rgba(255, 214, 232, 0.35);
       pointer-events: none;
       transition: opacity 0.8s ease;
     }
 
     @media (max-width: 680px) {
       .controls {
-        right: 12px;
-        bottom: 12px;
-        opacity: 0.65;
+        right: 10px;
+        bottom: 10px;
+        opacity: 0.68;
       }
       .hint {
         display: none;
@@ -119,10 +123,11 @@
   </style>
 </head>
 <body>
-  <canvas id="stage" aria-label="Animowany bukiet kwiatów ASCII — Dla Kochanej Wiktorii"></canvas>
-  <div class="hint" id="hint">dotknij lub porusz myszką · delikatny wiatr</div>
+  <canvas id="stage" aria-label="Obracający się bukiet kwiatów 3D w ASCII — Dla Kochanej Wiktorii"></canvas>
+  <div class="hint" id="hint">przeciągnij, aby obracać w 3D · kliknij dla płatków</div>
   <div class="controls">
-    <button class="btn" id="replayBtn" type="button" title="Odtwórz rozkwit ponownie">↻ rozkwitnij</button>
+    <button class="btn" id="disperseBtn" type="button" title="Rozsyp i złóż ponownie w 3D">✦ pył</button>
+    <button class="btn" id="replayBtn" type="button" title="Odtwórz rozkwit od pąka">↻ rozkwitnij</button>
   </div>
 
   <script>
@@ -132,6 +137,7 @@
       const params = new URLSearchParams(window.location.search);
       const DEDICATION = (params.get("msg") || "Dla Kochanej Wiktorii").slice(0, 48);
       const FORCE_TIME = params.has("t") ? parseFloat(params.get("t")) : null;
+      const FORCE_YAW = params.has("yaw") ? parseFloat(params.get("yaw")) : null;
 
       const canvas = document.getElementById("stage");
       const ctx = canvas.getContext("2d", { alpha: true });
@@ -141,18 +147,31 @@
       const glowCanvas = document.createElement("canvas");
       const glowCtx = glowCanvas.getContext("2d", { alpha: true });
 
-      // Bogata siatka ASCII 116x60 dla wyraźnych płatków, spiral róż i cienkich łodyg
-      const COLS = 116;
-      const ROWS = 60;
-      const CELL_RATIO = 0.56;
       const FONT_STACK = '"JetBrains Mono", "Fira Code", "Cascadia Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace';
+      // Aksamitna rampa bez kanciastych znaków (^ ` '), daje gładkie, świecące powierzchnie 3D
+      const RAMP = " .,:;-=+*o0%#@";
+      const RAMP_MAX = RAMP.length - 1;
+      const CELL_RATIO = 0.56;
 
-      const SIZE = COLS * ROWS;
-      const bufChar = new Array(SIZE);
-      const bufColor = new Array(SIZE);
-      const bufDepth = new Float32Array(SIZE);
-      const bufGlow = new Float32Array(SIZE);
+      // Siatka adaptacyjna: gęsta, holograficzna rozdzielczość (klimat bloom3d.py!)
+      let COLS = 152;
+      let ROWS = 86;
+      let bufChar = [];
+      let bufColIdx = new Int32Array(0);
+      let bufZ = new Float32Array(0);
+      let bufGlow = new Uint8Array(0);
 
+      function allocGrid(cols, rows) {
+        COLS = cols;
+        ROWS = rows;
+        const n = cols * rows;
+        bufChar = new Array(n);
+        bufColIdx = new Int32Array(n);
+        bufZ = new Float32Array(n);
+        bufGlow = new Uint8Array(n);
+      }
+
+      // Narzędzia matematyczne i PRNG
       function mulberry32(seed) {
         let a = seed >>> 0;
         return function () {
@@ -164,6 +183,7 @@
         };
       }
 
+      const rand = mulberry32(20261128);
       const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
       const lerp = (a, b, t) => a + (b - a) * t;
       const smoothstep = (e0, e1, x) => {
@@ -176,7 +196,7 @@
       };
       const easeOutBack = (x) => {
         const t = clamp(x, 0, 1);
-        const c1 = 1.35;
+        const c1 = 1.25;
         const c3 = c1 + 1;
         return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
       };
@@ -186,7 +206,7 @@
         return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
       }
 
-      function mixColor(c1, c2, t) {
+      function mixColorStr(c1, c2, t) {
         const u = clamp(t, 0, 1);
         const r = Math.round(c1[0] + (c2[0] - c1[0]) * u);
         const g = Math.round(c1[1] + (c2[1] - c1[1]) * u);
@@ -194,744 +214,684 @@
         return `rgb(${r},${g},${b})`;
       }
 
-      function samplePalette(stops, t) {
-        const u = clamp(t, 0, 1);
+      // Wstępnie wyliczona tablica barw (LUT): bogate, świecące barwy płatków i złota
+      const PALETTE_DEFS = {
+        crimsonRose: ["#4f0a26", "#9c1646", "#e82e6b", "#ff689b", "#ffc4dc", "#fff7fa"],
+        blushPeony:  ["#5e1b44", "#b53676", "#f26ba2", "#ffa8cf", "#ffe0f0", "#ffffff"],
+        coralRose:   ["#631824", "#c43542", "#fa6262", "#ff9e82", "#ffd8c4", "#fff8f2"],
+        sakura:      ["#632956", "#ba5590", "#f292c0", "#ffc8e3", "#ffebf5", "#ffffff"],
+        lavender:    ["#311e70", "#6547c7", "#9b7df2", "#c9b3ff", "#e9dfff", "#fcfaff"],
+        cornflower:  ["#193075", "#3465d4", "#669cff", "#a6ccff", "#dcecff", "#f9fbff"],
+        sunflower:   ["#6b3008", "#c46210", "#fa9e1e", "#ffd247", "#fff199", "#fffde8"],
+        creamPearl:  ["#525a7a", "#929bbd", "#ced6ec", "#f2f4fc", "#ffffff"],
+        goldCore:    ["#853a08", "#de7812", "#ffb829", "#ffe878", "#fffbe0"],
+        stemGreen:   ["#113824", "#20613e", "#34945a", "#5ec982", "#a8f0ba"],
+        leafMint:    ["#174736", "#28785c", "#44b084", "#7ee0b4", "#c7fae0"],
+        wrapGold:    ["#473020", "#7d583a", "#b88a5e", "#e8bd90", "#ffebd0"],
+        ribbonPink:  ["#78123d", "#cf2565", "#ff4f8e", "#ff94bf", "#ffe0ed"],
+      };
+
+      const PAL_STEPS = 32;
+      const PAL_NAMES = Object.keys(PALETTE_DEFS);
+      const PAL_ID = {};
+      const COLOR_LUT = []; // płaska tablica: palId * PAL_STEPS + shadeIdx -> "rgb(r,g,b)"
+
+      PAL_NAMES.forEach((name, idx) => {
+        PAL_ID[name] = idx;
+        const stops = PALETTE_DEFS[name].map(hexToRgb);
         const n = stops.length - 1;
-        const f = u * n;
-        const i = Math.min(n - 1, Math.floor(f));
-        return mixColor(stops[i], stops[i + 1], f - i);
+        for (let s = 0; s < PAL_STEPS; s++) {
+          const u = s / (PAL_STEPS - 1);
+          const f = u * n;
+          const i = Math.min(n - 1, Math.floor(f));
+          COLOR_LUT.push(mixColorStr(stops[i], stops[i + 1], f - i));
+        }
+      });
+
+      // =========================================================================
+      // Generator prawdziwej geometrii 3D bukietu (gęsta, gładka siatka bez dziur!)
+      // =========================================================================
+      const MAX_VERTS = 68000;
+      const vBx = new Float32Array(MAX_VERTS); // pozycja w stanie pąka (bud)
+      const vBy = new Float32Array(MAX_VERTS);
+      const vBz = new Float32Array(MAX_VERTS);
+      const vFx = new Float32Array(MAX_VERTS); // pozycja w pełnym rozkwicie (full)
+      const vFy = new Float32Array(MAX_VERTS);
+      const vFz = new Float32Array(MAX_VERTS);
+      const vNx = new Float32Array(MAX_VERTS); // normalna powierzchni 3D
+      const vNy = new Float32Array(MAX_VERTS);
+      const vNz = new Float32Array(MAX_VERTS);
+      const vDx = new Float32Array(MAX_VERTS); // wektor rozproszenia (tryb pyłu 3D)
+      const vDy = new Float32Array(MAX_VERTS);
+      const vDz = new Float32Array(MAX_VERTS);
+      const vBaseShade = new Float32Array(MAX_VERTS); // wrodzony gradient barwy płatka (0=nasada, 1=brzeg)
+      const vDelay = new Float32Array(MAX_VERTS); // opóźnienie rozkwitu w sekundach
+      const vDur = new Float32Array(MAX_VERTS);   // czas rozkwitu
+      const vPal = new Uint8Array(MAX_VERTS);     // indeks palety
+      const vGlowFlag = new Uint8Array(MAX_VERTS);
+      const vKind = new Uint8Array(MAX_VERTS);    // 0=łodyga/liść/owijka, 1=płatek 3D, 2=rdzeń/gipsówka
+      const vCharBias = new Uint8Array(MAX_VERTS); // 0=auto z jasności, >0=wymuszony znak (np. łodygi)
+
+      let vertCount = 0;
+
+      function pushVert(bx, by, bz, fx, fy, fz, nx, ny, nz, palName, baseShade, delay, dur, glow, kind, charBias = 0) {
+        if (vertCount >= MAX_VERTS) return;
+        const i = vertCount++;
+        vBx[i] = bx;
+        vBy[i] = by;
+        vBz[i] = bz;
+        vFx[i] = fx;
+        vFy[i] = fy;
+        vFz[i] = fz;
+
+        const nl = Math.hypot(nx, ny, nz) || 1;
+        vNx[i] = nx / nl;
+        vNy[i] = ny / nl;
+        vNz[i] = nz / nl;
+
+        // Kierunek dryfu dla efektu rozproszenia w pył (spiralny wiatr w górę i na boki)
+        const ang = Math.atan2(fz, fx) + (rand() - 0.5) * 1.4;
+        const speed = 2.4 + rand() * 4.8;
+        vDx[i] = Math.cos(ang) * speed + (rand() - 0.5) * 1.8;
+        vDy[i] = 1.2 + rand() * 3.6 + fy * 0.35;
+        vDz[i] = Math.sin(ang) * speed + (rand() - 0.5) * 1.8;
+
+        vBaseShade[i] = baseShade;
+        vDelay[i] = delay;
+        vDur[i] = dur;
+        vPal[i] = PAL_ID[palName];
+        vGlowFlag[i] = glow ? 1 : 0;
+        vKind[i] = kind;
+        vCharBias[i] = charBias;
       }
 
-      const PALETTES = {
-        crimsonRose: ["#3d091e", "#87143e", "#d62d62", "#ff6696", "#ffc0d8", "#fff5f9"].map(hexToRgb),
-        blushPeony: ["#4c1637", "#9f3166", "#ea659a", "#ffa3c9", "#ffdaec", "#fff8fc"].map(hexToRgb),
-        coralRose: ["#57151f", "#b02f3b", "#f25a5a", "#ff967a", "#ffd3bc", "#fff6f0"].map(hexToRgb),
-        sakura: ["#522244", "#a84c82", "#ea89b6", "#ffc0dd", "#ffe6f3", "#ffffff"].map(hexToRgb),
-        lavender: ["#241654", "#5238a8", "#886ae3", "#baa0ff", "#e2d4ff", "#f9f6ff"].map(hexToRgb),
-        cornflower: ["#142459", "#2a52b8", "#548cff", "#96c0ff", "#d6e8ff", "#f7faff"].map(hexToRgb),
-        sunflower: ["#592806", "#a8540d", "#ed941a", "#ffca3d", "#ffec8c", "#fffce3"].map(hexToRgb),
-        creamDaisy: ["#434863", "#8189a8", "#c2cae0", "#edf0fa", "#ffffff"].map(hexToRgb),
-        goldCenter: ["#6e3208", "#c96c10", "#ffaf24", "#ffe26b", "#fff9d1"].map(hexToRgb),
-        stemGreen: ["#0e301f", "#1b5435", "#2d824f", "#50b372", "#96e0a8"].map(hexToRgb),
-        leafMint: ["#133b2d", "#22664e", "#3a9972", "#70cca0", "#b8f2d4"].map(hexToRgb),
-        wrapGold: ["#38261a", "#664830", "#9c7450", "#d4a87d", "#f5dab8"].map(hexToRgb),
-        ribbonPink: ["#691034", "#ba225b", "#f54986", "#ff8cb7", "#ffd6e6"].map(hexToRgb),
-      };
+      // Układ ortonormalny zorientowany wzdłuż osi wzrostu kwiatu (axis = kierunek czubka)
+      function makeBasis(ax, ay, az) {
+        const al = Math.hypot(ax, ay, az) || 1;
+        const ux = ax / al, uy = ay / al, uz = az / al;
+        // Wektor pomocniczy nierównoległy do u
+        let rx, ry, rz;
+        if (Math.abs(uy) < 0.92) {
+          rx = uz; ry = 0; rz = -ux;
+        } else {
+          rx = 1; ry = 0; rz = 0;
+        }
+        const rl = Math.hypot(rx, ry, rz) || 1;
+        rx /= rl; ry /= rl; rz /= rl;
+        // b = u x r
+        const bx = uy * rz - uz * ry;
+        const by = uz * rx - ux * rz;
+        const bz = ux * ry - uy * rx;
+        return { ux, uy, uz, rx, ry, rz, bx, by, bz };
+      }
 
-      const RAMPS = {
-        rose: ".,:;-~=+*o%#@",
-        petal: ".,:`-+*o0%@",
-        spike: ".,:;+*o8%@",
-      };
+      // Transformacja z lokalnego układu kwiatu (lx, ly=wzdłuż osi, lz) do świata 3D
+      function toWorld(basis, ox, oy, oz, lx, ly, lz) {
+        return [
+          ox + basis.rx * lx + basis.ux * ly + basis.bx * lz,
+          oy + basis.ry * lx + basis.uy * ly + basis.by * lz,
+          oz + basis.rz * lx + basis.uz * ly + basis.bz * lz,
+        ];
+      }
 
-      // Punkt wiązania bukietu
-      const TIE_X = 58;
-      const TIE_Y = 44.5;
+      function dirToWorld(basis, lx, ly, lz) {
+        return [
+          basis.rx * lx + basis.ux * ly + basis.bx * lz,
+          basis.ry * lx + basis.uy * ly + basis.by * lz,
+          basis.rz * lx + basis.uz * ly + basis.bz * lz,
+        ];
+      }
+
+      // 1. Rzeźbiona Róża / Piwonia 3D — gęste spiralne płatki (137.5°), gładkie cieniowanie i pąk!
+      function buildRose3D(ox, oy, oz, ax, ay, az, scale, palName, delay, numPetals = 17, nu = 13, nv = 15) {
+        const basis = makeBasis(ax, ay, az);
+        const GOLDEN = 2.399963229728653;
+
+        // Punkt lokalny na płatku (u in [-1, 1], v in [0, 1]) dla zadanego rozchylenia tilt
+        function petalLocal(u, v, phi, len, hw, rBase, tilt, curlAmt) {
+          const w = hw * Math.sin(Math.PI * Math.pow(v, 0.62)) * (1.0 - 0.08 * v);
+          // Profil łukowaty wzdłuż płatka + wyraźne, rzeźbiarskie podwinięcie końcówki róży
+          const arch = tilt * (0.56 + 0.54 * v) + (v > 0.64 ? (v - 0.64) * curlAmt : 0);
+          const sLen = len * v;
+          const radOut = rBase + sLen * Math.sin(arch) + 0.16 * hw * (1 - u * u) * Math.sin(Math.PI * v);
+          const height = sLen * Math.cos(arch) - 0.08 * len * v * v * Math.sin(tilt);
+          const tang = u * w;
+          const cp = Math.cos(phi);
+          const sp = Math.sin(phi);
+          return [
+            radOut * cp - tang * sp,
+            height,
+            radOut * sp + tang * cp,
+          ];
+        }
+
+        for (let p = 0; p < numPetals; p++) {
+          const frac = p / Math.max(1, numPetals - 1);
+          const phi = p * GOLDEN + rand() * 0.12;
+          const len = scale * (0.48 + 0.74 * Math.pow(frac, 0.68));
+          const hw = scale * (0.30 + 0.50 * Math.pow(frac, 0.64));
+          const rBase = scale * (0.04 + 0.20 * frac);
+
+          const openTilt = 0.20 + 1.08 * Math.pow(frac, 0.78);
+          const budTilt = 0.06 + 0.24 * frac;
+          const curlAmt = 0.85 + 1.05 * frac;
+          const pDelay = delay + frac * 0.62;
+
+          const eps = 0.04;
+          for (let iv = 1; iv <= nv; iv++) {
+            const v = iv / nv;
+            for (let iu = 0; iu < nu; iu++) {
+              const u = -1 + (2 * iu) / (nu - 1);
+
+              const fLoc = petalLocal(u, v, phi, len, hw, rBase, openTilt, curlAmt);
+              const bLoc = petalLocal(u, v, phi, len * 0.60, hw * 0.54, rBase * 0.45, budTilt, 0.15);
+
+              const fU = petalLocal(u + eps, v, phi, len, hw, rBase, openTilt, curlAmt);
+              const fV = petalLocal(u, Math.min(1, v + eps), phi, len, hw, rBase, openTilt, curlAmt);
+              const dux = fU[0] - fLoc[0], duy = fU[1] - fLoc[1], duz = fU[2] - fLoc[2];
+              const dvx = fV[0] - fLoc[0], dvy = fV[1] - fLoc[1], dvz = fV[2] - fLoc[2];
+              const lnx = duy * dvz - duz * dvy;
+              const lny = duz * dvx - dux * dvz;
+              const lnz = dux * dvy - duy * dvx;
+
+              const wf = toWorld(basis, ox, oy, oz, fLoc[0], fLoc[1], fLoc[2]);
+              const wb = toWorld(basis, ox, oy, oz, bLoc[0], bLoc[1], bLoc[2]);
+              const wn = dirToWorld(basis, lnx, lny, lnz);
+
+              // Mocny kontrast między głębokim aksamitnym wnętrzem płatka a świecącym jasnym rantem!
+              const rimShine = v > 0.78 ? ((v - 0.78) / 0.22) * 0.34 : 0;
+              const baseShade = clamp(0.14 + Math.pow(v, 1.45) * 0.58 + rimShine + frac * 0.14, 0.12, 1.0);
+              const glow = v > 0.52 || frac > 0.55;
+
+              pushVert(
+                wb[0], wb[1], wb[2],
+                wf[0], wf[1], wf[2],
+                wn[0], wn[1], wn[2],
+                palName,
+                baseShade,
+                pDelay,
+                1.35,
+                glow,
+                1
+              );
+            }
+          }
+        }
+
+        // Świetlisty złoty środek w samym sercu róży
+        for (let k = 0; k < 36; k++) {
+          const a = k * GOLDEN;
+          const r = scale * 0.14 * Math.sqrt(k / 36);
+          const wf = toWorld(basis, ox, oy, oz, Math.cos(a) * r, scale * 0.22, Math.sin(a) * r);
+          const wb = toWorld(basis, ox, oy, oz, Math.cos(a) * r * 0.4, scale * 0.12, Math.sin(a) * r * 0.4);
+          pushVert(wb[0], wb[1], wb[2], wf[0], wf[1], wf[2], ax, ay, az, "goldCore", 0.86, delay, 0.9, true, 2);
+        }
+      }
+
+      // 2. Kwiat 3D z rozchylonymi płatkami (Wiśnia / Kosmos 5-płatkowy lub Stokrotka / Słonecznik 9-płatkowy)
+      function buildPetaled3D(ox, oy, oz, ax, ay, az, scale, petals, palName, centerPal, delay, sharp = false) {
+        const basis = makeBasis(ax, ay, az);
+        const nu = sharp ? 9 : 12;
+        const nv = sharp ? 13 : 14;
+        const rot0 = rand() * Math.PI * 2;
+
+        function pLoc(u, v, phi, len, hw, tilt) {
+          const profile = sharp
+            ? Math.sin(Math.PI * Math.pow(v, 0.58)) * (1 - 0.35 * v)
+            : Math.sin(Math.PI * Math.pow(v, 0.55)) * (1 + 0.12 * v);
+          // Delikatne wcięcie końcówki płatka wiśni (sakura)
+          const notch = !sharp && v > 0.82 ? 1 - 0.14 * Math.exp(-u * u * 10) * ((v - 0.82) / 0.18) : 1;
+          const s = len * v * notch;
+          const arch = tilt * (0.78 + 0.32 * v);
+          const cup = (1 - u * u) * hw * 0.22 * Math.sin(Math.PI * v);
+          const rad = scale * 0.18 + s * Math.sin(arch);
+          const h = s * Math.cos(arch) - cup;
+          const tang = u * hw * profile;
+          const cp = Math.cos(phi);
+          const sp = Math.sin(phi);
+          return [rad * cp - tang * sp, h, rad * sp + tang * cp];
+        }
+
+        const len = scale * (sharp ? 0.98 : 0.92);
+        const hw = scale * (sharp ? 0.24 : 0.42);
+        const openTilt = sharp ? 1.24 : 1.06;
+        const budTilt = 0.14;
+        const eps = 0.04;
+
+        for (let p = 0; p < petals; p++) {
+          const phi = rot0 + (p * Math.PI * 2) / petals;
+          const pDelay = delay + (p / petals) * 0.28;
+          for (let iv = 1; iv <= nv; iv++) {
+            const v = iv / nv;
+            for (let iu = 0; iu < nu; iu++) {
+              const u = -1 + (2 * iu) / (nu - 1);
+              const fL = pLoc(u, v, phi, len, hw, openTilt);
+              const bL = pLoc(u, v, phi, len * 0.52, hw * 0.45, budTilt);
+
+              const fU = pLoc(u + eps, v, phi, len, hw, openTilt);
+              const fV = pLoc(u, Math.min(1, v + eps), phi, len, hw, openTilt);
+              const dux = fU[0] - fL[0], duy = fU[1] - fL[1], duz = fU[2] - fL[2];
+              const dvx = fV[0] - fL[0], dvy = fV[1] - fL[1], dvz = fV[2] - fL[2];
+              const lnx = duy * dvz - duz * dvy;
+              const lny = duz * dvx - dux * dvz;
+              const lnz = dux * dvy - duy * dvx;
+
+              const wf = toWorld(basis, ox, oy, oz, fL[0], fL[1], fL[2]);
+              const wb = toWorld(basis, ox, oy, oz, bL[0], bL[1], bL[2]);
+              const wn = dirToWorld(basis, lnx, lny, lnz);
+
+              const baseShade = clamp(0.26 + 0.62 * Math.pow(v, 0.9) + (1 - Math.abs(u)) * 0.14, 0.18, 1.0);
+              pushVert(wb[0], wb[1], wb[2], wf[0], wf[1], wf[2], wn[0], wn[1], wn[2], palName, baseShade, pDelay, 1.25, v > 0.42, 1);
+            }
+          }
+        }
+
+        // Półkulisty świecący środek kwiatu (pyłek 3D)
+        const GOLDEN = 2.399963229728653;
+        const cPts = 52;
+        const cr = scale * (sharp ? 0.30 : 0.24);
+        for (let k = 0; k < cPts; k++) {
+          const frac = (k + 0.5) / cPts;
+          const r = cr * Math.sqrt(frac);
+          const phi = k * GOLDEN;
+          const h = cr * 0.62 * Math.sqrt(Math.max(0, 1 - frac));
+          const wf = toWorld(basis, ox, oy, oz, Math.cos(phi) * r, h, Math.sin(phi) * r);
+          const wb = toWorld(basis, ox, oy, oz, Math.cos(phi) * r * 0.4, h * 0.4, Math.sin(phi) * r * 0.4);
+          const wn = dirToWorld(basis, Math.cos(phi) * r, h + 0.15, Math.sin(phi) * r);
+          pushVert(wb[0], wb[1], wb[2], wf[0], wf[1], wf[2], wn[0], wn[1], wn[2], centerPal, 0.55 + 0.45 * (1 - frac), delay, 0.95, true, 2);
+        }
+      }
+
+      // 3. Przestrzenny kłos lawendy / chabra 3D
+      function buildLavender3D(bx, by, bz, tx, ty, tz, palName, delay) {
+        const dx = tx - bx, dy = ty - by, dz = tz - bz;
+        const basis = makeBasis(dx, dy, dz);
+        const len = Math.hypot(dx, dy, dz);
+        const GOLDEN = 2.399963229728653;
+        const florets = 140;
+
+        for (let k = 0; k < florets; k++) {
+          const u = k / (florets - 1); // 0=nasada kłosa, 1=czubek
+          const phi = k * GOLDEN;
+          const rad = (0.14 + 0.26 * Math.sin(u * Math.PI)) * (0.7 + 0.3 * rand());
+          const ly = u * len;
+          const lx = Math.cos(phi) * rad;
+          const lz = Math.sin(phi) * rad;
+
+          const wf = toWorld(basis, bx, by, bz, lx, ly, lz);
+          const wb = toWorld(basis, bx, by, bz, lx * 0.2, ly * 0.15, lz * 0.2);
+          const wn = dirToWorld(basis, lx, 0.18, lz);
+          const shade = clamp(0.32 + 0.52 * u + 0.18 * (rad / 0.4), 0.2, 1.0);
+          pushVert(wb[0], wb[1], wb[2], wf[0], wf[1], wf[2], wn[0], wn[1], wn[2], palName, shade, delay + u * 0.45, 1.1, u > 0.35, 1);
+        }
+      }
+
+      // 4. Krzywa łodyga 3D (rurka wzdłuż krzywej Béziera)
+      function buildStem3D(x0, y0, z0, cx, cy, cz, x1, y1, z1, radius, delay, steps = 44) {
+        const ring = 4;
+        for (let i = 0; i <= steps; i++) {
+          const u = i / steps;
+          const inv = 1 - u;
+          const px = inv * inv * x0 + 2 * inv * u * cx + u * u * x1;
+          const py = inv * inv * y0 + 2 * inv * u * cy + u * u * y1;
+          const pz = inv * inv * z0 + 2 * inv * u * cz + u * u * z1;
+
+          // Pozycja startowa przed wzrostem: u nasady wiązania
+          const bx = lerp(x0, px, 0.08);
+          const by = lerp(y0, py, 0.08);
+          const bz = lerp(z0, pz, 0.08);
+
+          const shade = 0.24 + 0.62 * u;
+          for (let r = 0; r < ring; r++) {
+            const a = (r * Math.PI * 2) / ring + u * 0.8;
+            const ox = Math.cos(a) * radius;
+            const oz = Math.sin(a) * radius;
+            pushVert(
+              bx, by, bz,
+              px + ox, py, pz + oz,
+              ox, 0.15, oz,
+              "stemGreen",
+              shade,
+              delay * 0.35 + u * 0.55,
+              0.75,
+              false,
+              0
+            );
+          }
+        }
+      }
+
+      // 5. Wygięty liść 3D (eukaliptus / róża)
+      function buildLeaf3D(ox, oy, oz, dx, dy, dz, length, width, delay) {
+        const basis = makeBasis(dx, dy, dz);
+        const nu = 7;
+        const nv = 12;
+        for (let iv = 1; iv <= nv; iv++) {
+          const v = iv / nv;
+          const w = width * Math.sin(Math.PI * Math.pow(v, 0.65));
+          const droop = -0.34 * length * v * v;
+          for (let iu = 0; iu < nu; iu++) {
+            const u = -1 + (2 * iu) / (nu - 1);
+            const lx = u * w;
+            const ly = v * length;
+            const lz = droop + (1 - Math.abs(u)) * 0.10 * width;
+
+            const wf = toWorld(basis, ox, oy, oz, lx, ly, lz);
+            const wb = toWorld(basis, ox, oy, oz, lx * 0.15, ly * 0.15, lz * 0.15);
+            const wn = dirToWorld(basis, u * 0.35, 0.3, 0.88);
+            const shade = clamp(0.28 + 0.45 * v + (1 - Math.abs(u)) * 0.25, 0.18, 0.95);
+            pushVert(wb[0], wb[1], wb[2], wf[0], wf[1], wf[2], wn[0], wn[1], wn[2], "leafMint", shade, delay + v * 0.35, 0.95, v > 0.65, 0);
+          }
+        }
+      }
+
+      // 6. Plisowana, ażurowa złota owijka 3D + satynowa kokarda 3D
+      function buildWrapAndBow3D() {
+        const yTie = -2.25;
+        const yTop = 0.35;
+
+        // Złoty, plisowany stożek (wyrazisty i jedwabisty w 3D)
+        const rings = 26;
+        const segs = 76;
+        for (let ir = 0; ir <= rings; ir++) {
+          const v = ir / rings;
+          const y = lerp(yTie, yTop, v);
+          const baseR = lerp(0.56, 2.52, Math.pow(v, 0.90));
+          for (let is = 0; is < segs; is++) {
+            const onRim = ir >= rings - 2;
+            const phi = (is * Math.PI * 2) / segs;
+            const flute = Math.sin(phi * 10.0 + v * 1.4);
+            // Gęstszy na górnej krawędzi i grzbietach plis, lekko ażurowy w zagłębieniach
+            if (!onRim && flute < -0.25 && (ir + is) % 2 !== 0) continue;
+
+            const r = baseR * (1.0 + 0.085 * v * flute);
+            const x = Math.cos(phi) * r;
+            const z = Math.sin(phi) * r;
+
+            const nx = Math.cos(phi) - 0.28 * Math.sin(phi) * Math.cos(phi * 10);
+            const nz = Math.sin(phi) + 0.28 * Math.cos(phi) * Math.cos(phi * 10);
+            const shade = clamp(0.34 + 0.40 * v + 0.24 * (0.5 + 0.5 * flute) + (onRim ? 0.24 : 0), 0.26, 1.0);
+            pushVert(
+              x * 0.25, yTie, z * 0.25,
+              x, y, z,
+              nx, -0.30, nz,
+              "wrapGold",
+              shade,
+              0.18 + v * 0.52,
+              0.95,
+              onRim || flute > 0.55,
+              0
+            );
+          }
+        }
+
+        // Satynowa różowa opaska 360° wokół talii
+        for (let iy = -3; iy <= 3; iy++) {
+          const yy = yTie + iy * 0.075;
+          const rr = 0.62 + (1 - Math.abs(iy) / 3.5) * 0.07;
+          for (let is = 0; is < 64; is++) {
+            const phi = (is * Math.PI * 2) / 64;
+            const x = Math.cos(phi) * rr;
+            const z = Math.sin(phi) * rr;
+            pushVert(
+              x * 0.4, yTie, z * 0.4,
+              x, yy, z,
+              Math.cos(phi), iy * 0.20, Math.sin(phi),
+              "ribbonPink",
+              0.74 + (1 - Math.abs(iy) / 3.5) * 0.26,
+              0.65,
+              0.85,
+              true,
+              1
+            );
+          }
+        }
+
+        // Przestrzenna, dwupętlowa kokarda 3D na froncie + dwie falujące wstążki 3D
+        const bowZ = 0.70;
+        for (const side of [-1, 1]) {
+          for (let it = 0; it < 44; it++) {
+            const a = (it / 43) * Math.PI * 2;
+            const loopX = side * (0.68 + 0.66 * Math.cos(a));
+            const loopY = yTie + 0.42 * Math.sin(a) * (0.72 + 0.28 * Math.cos(a));
+            const loopZ = bowZ + 0.30 * Math.sin(a * 0.5) + 0.14 * (1 - Math.cos(a));
+            for (let iw = -3; iw <= 3; iw++) {
+              const wy = loopY + iw * 0.055;
+              const wz = loopZ + Math.cos(a) * iw * 0.025;
+              pushVert(
+                0, yTie, bowZ * 0.5,
+                loopX, wy, wz,
+                side * 0.25, Math.sin(a) * 0.4 + iw * 0.12, 0.88,
+                "ribbonPink",
+                0.66 + 0.34 * (1 - Math.abs(iw) / 3.5),
+                0.78,
+                0.9,
+                true,
+                1
+              );
+            }
+          }
+
+          // Opadające wstążeczki 3D po obu stronach
+          for (let ik = 0; ik < 34; ik++) {
+            const u = ik / 33;
+            const rx = side * (0.24 + u * 1.05 + Math.sin(u * 4.2) * 0.14);
+            const ry = yTie - 0.12 - u * 1.72;
+            const rz = bowZ + 0.16 + Math.sin(u * 3.5) * 0.26;
+            for (let iw = -2; iw <= 2; iw++) {
+              pushVert(
+                0, yTie, bowZ * 0.5,
+                rx + iw * 0.048, ry, rz,
+                side * 0.2, 0.1, 0.95,
+                "ribbonPink",
+                0.88 - u * 0.32,
+                0.88 + u * 0.25,
+                0.8,
+                u < 0.8,
+                1
+              );
+            }
+          }
+        }
+      }
 
       // =========================================================================
-      // Starannie rozmieszczony bukiet: oddech między kwiatami, wyraźne sylwetki!
+      // Złożenie całego przestrzennego bukietu 3D (symetryczna kopuła 360°!)
       // =========================================================================
-      const FLOWERS = [
-        // Górna korona: smukłe kłosy lawendy i chabrów
-        { type: "lavender", x: 58.0, y: 4.8, size: 1.15, tilt: 0.02, pal: "lavender", delay: 0.58, depth: 0.18, phase: 1.2 },
-        { type: "lavender", x: 44.5, y: 7.4, size: 1.05, tilt: -0.26, pal: "lavender", delay: 0.66, depth: 0.18, phase: 0.3 },
-        { type: "lavender", x: 71.5, y: 7.5, size: 1.05, tilt: 0.26, pal: "cornflower", delay: 0.68, depth: 0.19, phase: 2.1 },
-        { type: "lavender", x: 31.5, y: 13.5, size: 0.92, tilt: -0.46, pal: "cornflower", delay: 0.78, depth: 0.16, phase: 3.1 },
-        { type: "lavender", x: 84.5, y: 13.8, size: 0.92, tilt: 0.46, pal: "lavender", delay: 0.80, depth: 0.16, phase: 4.0 },
+      function buildFullBouquet3D() {
+        const yTie = -2.25;
+        const yBottom = -3.75;
 
-        // Środkowo-górny łuk: 5-płatkowe sakury, złote słoneczniki i białe stokrotki
-        { type: "sunflower", x: 48.0, y: 14.5, size: 4.6, pal: "sunflower", centerPal: "crimsonRose", delay: 0.92, depth: 0.40, phase: 2.8, petals: 9 },
-        { type: "cosmos", x: 68.5, y: 14.8, size: 4.8, pal: "sakura", centerPal: "goldCenter", delay: 0.96, depth: 0.42, phase: 3.7, petals: 5 },
-        { type: "daisy", x: 34.0, y: 21.2, size: 4.6, pal: "creamDaisy", centerPal: "goldCenter", delay: 1.06, depth: 0.44, phase: 0.9, petals: 8 },
-        { type: "cosmos", x: 82.0, y: 21.4, size: 4.7, pal: "blushPeony", centerPal: "goldCenter", delay: 1.08, depth: 0.44, phase: 2.0, petals: 5 },
-        { type: "cosmos", x: 24.5, y: 28.4, size: 4.0, pal: "sakura", centerPal: "goldCenter", delay: 1.24, depth: 0.38, phase: 4.5, petals: 5 },
-        { type: "daisy", x: 91.5, y: 28.2, size: 4.1, pal: "creamDaisy", centerPal: "goldCenter", delay: 1.26, depth: 0.38, phase: 5.1, petals: 8 },
+        // Lista kwiatów 3D z wyraźniejszym oddechem między główkami (czytelne sylwetki w 360°!)
+        const specs = [
+          // Korona centralna: wielka królewska karmazynowa róża 3D
+          { kind: "rose", x: 0.0, y: 2.95, z: 0.0, ax: 0.0, ay: 1.0, az: 0.05, scale: 1.28, pal: "crimsonRose", delay: 0.70, petals: 18 },
 
-        // Główne serce bukietu: rzeźbione róże 3D + kwitnąca wiśnia na pierwszym planie
-        { type: "rose", x: 58.0, y: 20.6, size: 6.2, pal: "crimsonRose", delay: 1.12, depth: 0.82, phase: 0.2 },
-        { type: "rose", x: 43.2, y: 26.8, size: 5.6, pal: "blushPeony", delay: 1.28, depth: 0.76, phase: 1.6 },
-        { type: "rose", x: 72.8, y: 26.6, size: 5.6, pal: "coralRose", delay: 1.32, depth: 0.77, phase: 2.9 },
-        { type: "cosmos", x: 58.2, y: 31.2, size: 5.0, pal: "sakura", centerPal: "goldCenter", delay: 1.44, depth: 0.88, phase: 4.1, petals: 5 },
-        { type: "sunflower", x: 33.8, y: 33.2, size: 4.1, pal: "sunflower", centerPal: "crimsonRose", delay: 1.48, depth: 0.66, phase: 5.2, petals: 8 },
-        { type: "cosmos", x: 82.2, y: 33.0, size: 4.2, pal: "lavender", centerPal: "goldCenter", delay: 1.50, depth: 0.66, phase: 0.8, petals: 5 },
-        { type: "rose", x: 48.0, y: 35.6, size: 4.3, pal: "crimsonRose", delay: 1.56, depth: 0.90, phase: 2.3 },
-        { type: "rose", x: 68.0, y: 35.5, size: 4.3, pal: "blushPeony", delay: 1.58, depth: 0.90, phase: 3.4 },
-      ];
+          // Pierścień górny (5 dużych, wyraźnych kwiatów co 72° wokół osi Y)
+          ...Array.from({ length: 5 }, (_, k) => {
+            const a = (k * Math.PI * 2) / 5 + 0.24;
+            const r = 1.92;
+            const types = [
+              { kind: "rose", pal: "blushPeony", scale: 1.04, petals: 15 },
+              { kind: "cosmos", pal: "sakura", center: "goldCore", scale: 1.05, petals: 5, sharp: false },
+              { kind: "rose", pal: "coralRose", scale: 1.02, petals: 15 },
+              { kind: "cosmos", pal: "sunflower", center: "crimsonRose", scale: 0.98, petals: 9, sharp: true },
+              { kind: "rose", pal: "lavender", scale: 1.00, petals: 15 },
+            ][k];
+            return {
+              ...types,
+              x: Math.cos(a) * r,
+              y: 1.92 + (k % 2) * 0.18,
+              z: Math.sin(a) * r,
+              ax: Math.cos(a) * 0.48,
+              ay: 0.87,
+              az: Math.sin(a) * 0.48,
+              delay: 0.86 + k * 0.11,
+            };
+          }),
 
-      // Gałązki eukaliptusa i paproci budujące elegancki, miękki zarys bukietu
-      const FOLIAGE = [
-        { x: 20.5, y: 32.8, ctrlX: 35, ctrlY: 40, leaves: 6, side: -1, delay: 0.44, depth: 0.12, phase: 0.5 },
-        { x: 95.5, y: 32.6, ctrlX: 81, ctrlY: 40, leaves: 6, side: 1, delay: 0.46, depth: 0.12, phase: 1.9 },
-        { x: 27.0, y: 18.8, ctrlX: 39, ctrlY: 32, leaves: 5, side: -1, delay: 0.54, depth: 0.14, phase: 2.8 },
-        { x: 89.0, y: 19.0, ctrlX: 77, ctrlY: 32, leaves: 5, side: 1, delay: 0.56, depth: 0.14, phase: 3.7 },
-        { x: 39.5, y: 38.0, ctrlX: 46, ctrlY: 42, leaves: 4, side: -1, delay: 0.62, depth: 0.48, phase: 4.4 },
-        { x: 76.5, y: 37.8, ctrlX: 70, ctrlY: 42, leaves: 4, side: 1, delay: 0.64, depth: 0.48, phase: 5.3 },
-      ];
+          // Pierścień dolny-zewnętrzny (6 wyraźnych, kontrastowych kwiatów co 60° pochylonych na zewnątrz)
+          ...Array.from({ length: 6 }, (_, k) => {
+            const a = (k * Math.PI * 2) / 6 + 0.62;
+            const r = 2.74;
+            const types = [
+              { kind: "cosmos", pal: "creamPearl", center: "goldCore", scale: 0.94, petals: 8, sharp: true },
+              { kind: "rose", pal: "crimsonRose", scale: 0.90, petals: 13 },
+              { kind: "cosmos", pal: "sakura", center: "goldCore", scale: 0.96, petals: 5, sharp: false },
+              { kind: "cosmos", pal: "sunflower", center: "crimsonRose", scale: 0.92, petals: 9, sharp: true },
+              { kind: "rose", pal: "blushPeony", scale: 0.92, petals: 13 },
+              { kind: "cosmos", pal: "cornflower", center: "goldCore", scale: 0.90, petals: 6, sharp: false },
+            ][k];
+            return {
+              ...types,
+              x: Math.cos(a) * r,
+              y: 0.78 + (k % 2) * 0.22,
+              z: Math.sin(a) * r,
+              ax: Math.cos(a) * 0.74,
+              ay: 0.67,
+              az: Math.sin(a) * 0.74,
+              delay: 1.10 + k * 0.09,
+            };
+          }),
+        ];
 
-      const rand = mulberry32(20261127);
+        // Buduj każdy kwiat + jego przestrzenną łodygę 3D schodzącą przez kokardę aż w dół
+        for (const sp of specs) {
+          if (sp.kind === "rose") {
+            buildRose3D(sp.x, sp.y, sp.z, sp.ax, sp.ay, sp.az, sp.scale, sp.pal, sp.delay, sp.petals);
+          } else {
+            buildPetaled3D(sp.x, sp.y, sp.z, sp.ax, sp.ay, sp.az, sp.scale, sp.petals, sp.pal, sp.center, sp.delay, sp.sharp);
+          }
 
-      // Chmurki delikatnej białej gipsówki w prześwitach między kwiatami
-      const BABYS_BREATH = [];
-      for (let i = 0; i < 46; i++) {
-        const angle = lerp(-Math.PI * 0.92, -Math.PI * 0.08, rand());
-        const dist = lerp(11.5, 31.5, Math.sqrt(rand()));
-        const bx = TIE_X + Math.cos(angle) * dist * 1.18;
-        const by = TIE_Y - 7.5 + Math.sin(angle) * dist * 0.88;
-        if (by > 7 && by < 38 && bx > 20 && bx < 96) {
-          BABYS_BREATH.push({
-            x: bx,
-            y: by,
-            ch: rand() < 0.46 ? "*" : rand() < 0.80 ? "+" : "°",
-            delay: 1.55 + rand() * 1.25,
-            phase: rand() * Math.PI * 2,
-            warm: rand() < 0.35,
+          // Łodyga od talii do główki kwiatu
+          buildStem3D(
+            sp.x * 0.14, yTie, sp.z * 0.14,
+            sp.x * 0.45, lerp(yTie, sp.y, 0.48), sp.z * 0.45,
+            sp.x * 0.94, sp.y - 0.12, sp.z * 0.94,
+            0.055,
+            sp.delay
+          );
+
+          // Dolna końcówka łodygi rozchodząca się lekko poniżej kokardy
+          buildStem3D(
+            sp.x * 0.14, yTie, sp.z * 0.14,
+            sp.x * 0.22, lerp(yTie, yBottom, 0.5), sp.z * 0.22,
+            sp.x * 0.34, yBottom - rand() * 0.25, sp.z * 0.34,
+            0.05,
+            0.35,
+            16
+          );
+        }
+
+        // 6 strzelistych kłosów lawendy i chabrów 3D wyłaniających się ponad koroną
+        for (let k = 0; k < 6; k++) {
+          const a = (k * Math.PI * 2) / 6 + 0.12;
+          const rBase = 1.15;
+          const rTip = 1.95;
+          const pal = k % 2 === 0 ? "lavender" : "cornflower";
+          const bx = Math.cos(a) * rBase, by = 1.85, bz = Math.sin(a) * rBase;
+          const tx = Math.cos(a) * rTip, ty = 3.65 + (k % 2) * 0.22, tz = Math.sin(a) * rTip;
+          buildLavender3D(bx, by, bz, tx, ty, tz, pal, 0.72 + k * 0.08);
+          buildStem3D(bx * 0.18, yTie, bz * 0.18, bx * 0.55, 0.0, bz * 0.55, bx, by, bz, 0.045, 0.6, 28);
+        }
+
+        // 12 przestrzennie wygiętych liści eukaliptusa tworzących kołnierz u dołu korony
+        for (let k = 0; k < 12; k++) {
+          const a = (k * Math.PI * 2) / 12 + 0.26;
+          const r0 = 1.85;
+          const ox = Math.cos(a) * r0;
+          const oy = 0.22 + (k % 2) * 0.24;
+          const oz = Math.sin(a) * r0;
+          buildLeaf3D(ox, oy, oz, Math.cos(a) * 0.92, 0.32, Math.sin(a) * 0.92, 1.38, 0.42, 0.52 + k * 0.04);
+        }
+
+        // Delikatna chmurka 3D świetlistej gipsówki (Baby's Breath) pomiędzy kwiatami
+        for (let k = 0; k < 78; k++) {
+          const a = rand() * Math.PI * 2;
+          const elev = lerp(0.15, 1.35, rand());
+          const rad = lerp(1.5, 3.05, Math.sqrt(rand())) * Math.sin(elev);
+          const fx = Math.cos(a) * rad;
+          const fy = 0.85 + Math.cos(elev) * 2.15 + rand() * 0.5;
+          const fz = Math.sin(a) * rad;
+          const pal = rand() < 0.35 ? "goldCore" : "creamPearl";
+          pushVert(fx * 0.3, yTie, fz * 0.3, fx, fy, fz, fx, fy, fz, pal, 0.92, 1.45 + rand() * 0.8, 0.85, true, 2);
+        }
+
+        // Plisowana złota owijka 3D + satynowa różowa kokarda 3D
+        buildWrapAndBow3D();
+      }
+
+      buildFullBouquet3D();
+
+      // =========================================================================
+      // Orbitujące cząsteczki 3D (płatki, świetliki i serduszka krążące w 360°!)
+      // =========================================================================
+      const orbiters = [];
+      for (let i = 0; i < 42; i++) {
+        const isHeart = i < 12;
+        const isPetal = !isHeart && i < 26;
+        orbiters.push({
+          kind: isHeart ? "heart" : isPetal ? "petal" : "spark",
+          radius: isHeart ? lerp(3.4, 4.7, rand()) : lerp(2.8, 4.8, rand()),
+          angle: rand() * Math.PI * 2,
+          speed: (0.16 + rand() * 0.28) * (rand() < 0.5 ? 1 : -1),
+          yBase: lerp(-2.6, 3.6, rand()),
+          yAmp: 0.25 + rand() * 0.55,
+          phase: rand() * Math.PI * 2,
+          appear: 1.7 + rand() * 2.4,
+          pal: isHeart ? PAL_ID.ribbonPink : isPetal ? (rand() < 0.5 ? PAL_ID.blushPeony : PAL_ID.sakura) : PAL_ID.goldCore,
+          shade: Math.floor(lerp(PAL_STEPS * 0.62, PAL_STEPS - 1, rand())),
+        });
+      }
+
+      // Jednorazowe płatki/serduszka z kliknięcia w ekran
+      const bursts = [];
+      function spawnClickBurst(wx, wy, wz) {
+        for (let i = 0; i < 14; i++) {
+          if (bursts.length > 90) break;
+          const a = rand() * Math.PI * 2;
+          const sp = 1.2 + rand() * 3.0;
+          bursts.push({
+            kind: i < 5 ? "heart" : i < 11 ? "petal" : "spark",
+            x: wx,
+            y: wy,
+            z: wz,
+            vx: Math.cos(a) * sp,
+            vy: 0.8 + rand() * 2.4,
+            vz: Math.sin(a) * sp,
+            age: 0,
+            life: 2.2 + rand() * 1.6,
+            pal: i < 5 ? PAL_ID.ribbonPink : i < 11 ? PAL_ID.sakura : PAL_ID.goldCore,
           });
         }
       }
 
-      // Delikatne gwiazdy w tle
-      const STARS = [];
-      for (let i = 0; i < 58; i++) {
-        const sx = Math.floor(rand() * COLS);
-        const sy = Math.floor(rand() * (ROWS - 9));
-        const dx = (sx - TIE_X) / 36;
-        const dy = (sy - 24) / 20;
-        if (dx * dx + dy * dy < 0.88) continue;
-        STARS.push({
-          x: sx,
-          y: sy,
-          phase: rand() * Math.PI * 2,
-          speed: 0.7 + rand() * 1.4,
-          ch: rand() < 0.78 ? "." : "·",
-          tint: rand(),
-        });
-      }
+      // Subtelne statyczne gwiazdki w głębokim tle
+      const bgStars = Array.from({ length: 56 }, () => ({
+        u: rand(),
+        v: rand() * 0.86,
+        phase: rand() * Math.PI * 2,
+        speed: 0.8 + rand() * 1.5,
+      }));
 
       // =========================================================================
-      // Unoszące się serduszka ASCII, płatki i świetliki ze strefą ochronną
+      // Stan kamery 3D, interaktywne obracanie i efekt rozproszenia w pył
       // =========================================================================
-      const BIG_HEART = [
-        " /\\ /\\ ",
-        "(  v  )",
-        " \\   / ",
-        "  \\ /  ",
-        "   v   ",
-      ];
-      const MID_HEART = [
-        "/\\/\\",
-        "\\  /",
-        " \\/ ",
-      ];
-      const SPARKLE_BURST = [
-        " . ",
-        "-+-",
-        " ' ",
-      ];
-
-      // Sprawdza, czy pozycja koliduje z koroną bukietu (żeby duże serduszka go obramowywały, a nie zasłaniały!)
-      function inBouquetCrown(x, y) {
-        const dx = (x - TIE_X) / 39;
-        const dy = (y - 23.5) / 19;
-        return dx * dx + dy * dy < 1.0;
-      }
-
-      const particles = [];
-
-      function spawnParticle(fromBurst = false, originX = null, originY = null, forcedKind = null) {
-        const r = rand();
-        let kind = forcedKind || "spark";
-        if (!forcedKind) {
-          if (r < 0.10) kind = "bigHeart";
-          else if (r < 0.25) kind = "midHeart";
-          else if (r < 0.46) kind = "miniHeart";
-          else if (r < 0.68) kind = "petal";
-          else if (r < 0.78) kind = "burst";
-        }
-
-        let x;
-        let y;
-        if (originX !== null && originY !== null) {
-          x = originX + (rand() - 0.5) * 6;
-          y = originY + (rand() - 0.5) * 3;
-        } else if (kind === "bigHeart" || kind === "midHeart") {
-          // Zawsze w pięknej ramie po lewej lub prawej stronie bukietu
-          const leftSide = rand() < 0.5;
-          x = leftSide ? lerp(6, 20, rand()) : lerp(96, 110, rand());
-          y = lerp(10, 44, rand());
-        } else {
-          // Próbuj znaleźć ładne miejsce poza gęstym środkiem kwiatów
-          x = lerp(8, COLS - 9, rand());
-          y = fromBurst ? lerp(10, 38, rand()) : lerp(8, 48, rand());
-          if (!fromBurst && kind === "miniHeart" && inBouquetCrown(x, y)) {
-            x = x < TIE_X ? lerp(7, 23, rand()) : lerp(93, 109, rand());
-          }
-        }
-
-        const colors =
-          kind === "bigHeart" || kind === "midHeart" || kind === "miniHeart"
-            ? ["#ff6fa5", "#ffa1c6", "#ff4f86", "#ffd4e7"]
-            : kind === "petal"
-            ? ["#ff8eb8", "#ffbdd7", "#ff6d98", "#ffd4b8", "#c8b3ff"]
-            : ["#ffe58f", "#a6e6ff", "#ffd4ec", "#fff6c7"];
-
-        return {
-          kind,
-          x,
-          y,
-          vx: (rand() - 0.5) * (fromBurst ? 4.8 : 0.75),
-          vy: -(1.3 + rand() * (fromBurst ? 4.0 : 1.9)),
-          phase: rand() * Math.PI * 2,
-          sway: 0.9 + rand() * 1.8,
-          color: colors[Math.floor(rand() * colors.length)],
-          appear: fromBurst ? 0 : 1.9 + rand() * 3.4,
-          age: 0,
-          life: fromBurst ? 2.5 + rand() * 2.2 : 9 + rand() * 8,
-          ephemeral: fromBurst,
-        };
-      }
-
-      function initParticles() {
-        particles.length = 0;
-        // Kilka starannie rozstawionych serduszek tworzących symetryczną ramę po obu stronach
-        const anchored = [
-          { kind: "bigHeart", x: 13, y: 17, col: "#ff74a8" },
-          { kind: "bigHeart", x: 103, y: 21, col: "#ff9bc2" },
-          { kind: "midHeart", x: 17, y: 34, col: "#ffb3d1" },
-          { kind: "midHeart", x: 99, y: 36, col: "#ff6699" },
-          { kind: "midHeart", x: 22, y: 10, col: "#ff85b3" },
-          { kind: "midHeart", x: 94, y: 11, col: "#ffa8cb" },
-        ];
-        for (const a of anchored) {
-          const p = spawnParticle(false, a.x, a.y, a.kind);
-          p.x = a.x;
-          p.y = a.y;
-          p.color = a.col;
-          p.vx = 0;
-          p.appear = 1.8 + rand() * 1.4;
-          particles.push(p);
-        }
-        // Dodatkowe drobne iskierki, płatki i małe <3
-        for (let i = 0; i < 30; i++) {
-          const k = rand() < 0.35 ? "miniHeart" : rand() < 0.65 ? "petal" : rand() < 0.82 ? "spark" : "burst";
-          const p = spawnParticle(false, null, null, k);
-          particles.push(p);
-        }
-      }
-      initParticles();
-
-      let windTarget = 0;
-      let windCurrent = 0;
-      let pointerActive = false;
-      let simTime = 0;
-      let lastFrameTs = performance.now();
-
-      function clearBuffers() {
-        bufChar.fill(" ");
-        bufColor.fill(null);
-        bufDepth.fill(-99);
-        bufGlow.fill(0);
-      }
-
-      function putCell(x, y, ch, color, depth, glow = 0.35) {
-        const ix = Math.round(x);
-        const iy = Math.round(y);
-        if (ix < 0 || ix >= COLS || iy < 0 || iy >= ROWS) return;
-        const idx = iy * COLS + ix;
-        if (depth >= bufDepth[idx]) {
-          bufDepth[idx] = depth;
-          bufChar[idx] = ch;
-          bufColor[idx] = color;
-          bufGlow[idx] = glow;
-        }
-      }
-
-      // Wycięcie subtelnego oddechu tła za płatkami — nadaje każdemu kwiatu krystalicznie ostrą sylwetkę!
-      function putMask(x, y, depth) {
-        const ix = Math.round(x);
-        const iy = Math.round(y);
-        if (ix < 0 || ix >= COLS || iy < 0 || iy >= ROWS) return;
-        const idx = iy * COLS + ix;
-        if (depth > bufDepth[idx]) {
-          bufDepth[idx] = depth;
-          bufChar[idx] = " ";
-          bufColor[idx] = null;
-          bufGlow[idx] = 0;
-        }
-      }
-
-      function putSprite(cx, cy, lines, color, depth, glow = 0.6) {
-        const h = lines.length;
-        const w = lines[0].length;
-        const x0 = Math.round(cx - w * 0.5);
-        const y0 = Math.round(cy - h * 0.5);
-        for (let r = 0; r < h; r++) {
-          const row = lines[r];
-          for (let c = 0; c < row.length; c++) {
-            const ch = row[c];
-            if (ch !== " ") {
-              putCell(x0 + c, y0 + r, ch, color, depth, glow);
-            }
-          }
-        }
-      }
-
-      function windOffset(y, t, phase) {
-        const h = clamp((TIE_Y - y) / 38, 0, 1.25);
-        const sway =
-          Math.sin(t * 1.12 + phase) * 0.82 +
-          Math.sin(t * 2.02 + phase * 1.5) * 0.25 +
-          windCurrent * 2.8;
-        return sway * h * h;
-      }
-
-      function stemChar(dx, dy) {
-        const slope = dx / (Math.abs(dy) + 0.001);
-        if (slope < -0.58) return "\\";
-        if (slope > 0.58) return "/";
-        if (slope < -0.22) return "(";
-        if (slope > 0.22) return ")";
-        return "|";
-      }
-
-      function drawStem(x0, y0, cx, cy, x1, y1, grow, depth, t, phase, thick = false) {
-        if (grow <= 0.01) return;
-        const steps = 48;
-        const maxStep = Math.floor(steps * grow);
-        const pal = PALETTES.stemGreen;
-
-        for (let i = 0; i <= maxStep; i++) {
-          const u = i / steps;
-          const inv = 1 - u;
-          let px = inv * inv * x0 + 2 * inv * u * cx + u * u * x1;
-          const py = inv * inv * y0 + 2 * inv * u * cy + u * u * y1;
-          px += windOffset(py, t, phase);
-
-          const dtx = 2 * inv * (cx - x0) + 2 * u * (x1 - cx);
-          const dty = 2 * inv * (cy - y0) + 2 * u * (y1 - cy);
-          const ch = stemChar(dtx, dty);
-          const shade = 0.20 + 0.68 * u;
-          putCell(px, py, ch, samplePalette(pal, shade), depth, 0.20);
-          if (thick && u < 0.72) {
-            putCell(px + (dtx >= 0 ? -0.8 : 0.8), py, ":", samplePalette(pal, shade * 0.65), depth - 0.01, 0.12);
-          }
-        }
-      }
-
-      function drawFoliage(f, t) {
-        const grow = easeOutCubic((t - f.delay) / 1.35);
-        if (grow <= 0.01) return;
-
-        drawStem(TIE_X, TIE_Y, f.ctrlX, f.ctrlY, f.x, f.y, grow, f.depth, t, f.phase, false);
-        const pal = PALETTES.leafMint;
-        for (let i = 1; i <= f.leaves; i++) {
-          const u = 0.24 + (i / (f.leaves + 0.6)) * 0.74;
-          if (u > grow) continue;
-          const leafGrow = easeOutCubic((grow - u) * 3.8);
-          const inv = 1 - u;
-          let lx = inv * inv * TIE_X + 2 * inv * u * f.ctrlX + u * u * f.x;
-          const ly = inv * inv * TIE_Y + 2 * inv * u * f.ctrlY + u * u * f.y;
-          lx += windOffset(ly, t, f.phase);
-
-          const dir = i % 2 === 0 ? f.side : -f.side * 0.65;
-          const len = (2.6 + (1 - u) * 1.6) * leafGrow;
-          for (let s = 1; s <= 3; s++) {
-            const frac = s / 3;
-            const px = lx + dir * len * frac;
-            const py = ly - frac * 0.95;
-            const ch = s === 3 ? (dir > 0 ? "/" : "\\") : s === 2 ? "%" : dir > 0 ? "(" : ")";
-            putCell(px, py, ch, samplePalette(pal, 0.35 + frac * 0.55), f.depth + 0.02, 0.28);
-          }
-        }
-      }
-
-      function drawWrapAndRibbon(t) {
-        const grow = easeOutCubic((t - 0.10) / 1.15);
-        if (grow <= 0.01) return;
-
-        // Dolny pęk łodyg pod kokardą
-        const stemPal = PALETTES.stemGreen;
-        for (let s = -5; s <= 5; s++) {
-          const steps = Math.floor(6 * grow);
-          for (let k = 0; k <= steps; k++) {
-            const frac = k / 6;
-            const x = TIE_X + s * (0.58 + frac * 0.85);
-            const y = TIE_Y + 0.7 + frac * 5.2;
-            const ch = s < -1 ? "/" : s > 1 ? "\\" : "|";
-            putCell(x, y, ch, samplePalette(stemPal, 0.24 + (1 - frac) * 0.48), 0.58 - Math.abs(s) * 0.01, 0.16);
-          }
-        }
-
-        // Elegancki stożek z półprzezroczystego złotego papieru florystycznego
-        const wrapPal = PALETTES.wrapGold;
-        const yTop = 35.8;
-        const yBot = TIE_Y + 0.2;
-        const visibleTop = lerp(yBot, yTop, grow);
-
-        for (let y = Math.ceil(visibleTop); y <= Math.floor(yBot); y++) {
-          const frac = clamp((yBot - y) / (yBot - yTop), 0, 1);
-          const halfW = 3.8 + frac * 17.5;
-          const sway = windOffset(y, t, 0.8) * 0.35;
-          const xLeft = TIE_X - halfW + sway;
-          const xRight = TIE_X + halfW + sway;
-
-          putCell(xLeft, y, "\\", samplePalette(wrapPal, 0.72 + frac * 0.24), 0.74, 0.40);
-          putCell(xRight, y, "/", samplePalette(wrapPal, 0.72 + frac * 0.24), 0.74, 0.40);
-          putCell(xLeft + 1, y, ":", samplePalette(wrapPal, 0.48), 0.62, 0.18);
-          putCell(xRight - 1, y, ":", samplePalette(wrapPal, 0.48), 0.62, 0.18);
-
-          for (let x = Math.ceil(xLeft + 2); x <= Math.floor(xRight - 2); x++) {
-            const nx = (x - (TIE_X + sway)) / Math.max(1, halfW);
-            const fold = Math.sin(nx * 5.5 + frac * 2.2);
-            if (Math.abs(nx) < 0.82 && (y + x) % 2 === 0) {
-              const ch = fold > 0.36 ? "-" : fold < -0.36 ? "." : ":";
-              const shade = 0.22 + 0.38 * (1 - Math.abs(nx)) + 0.16 * fold;
-              putCell(x, y, ch, samplePalette(wrapPal, shade), 0.54, 0.14);
-            }
-          }
-        }
-
-        // Satynowa różowa kokarda i falujące wstążki
-        const ribGrow = easeOutBack((t - 0.72) / 0.88);
-        if (ribGrow > 0.02) {
-          const rPal = PALETTES.ribbonPink;
-          const w = Math.round(4.2 * clamp(ribGrow, 0, 1.1));
-          for (let dx = -w; dx <= w; dx++) {
-            const edge = 1 - Math.abs(dx) / (w + 0.5);
-            const ch = Math.abs(dx) <= 1 ? "@" : "=";
-            putCell(TIE_X + dx, TIE_Y, ch, samplePalette(rPal, 0.50 + edge * 0.48), 0.98, 0.76);
-          }
-
-          if (ribGrow > 0.42) {
-            const s = Math.min(1, ribGrow);
-            const bowSprite = [
-              [-7, -1, "("], [-6, -1, "~"], [-5, -1, "~"], [-4, -1, ")"],
-              [-8, 0, "("], [-7, 0, "*"], [-6, 0, "o"], [-5, 0, "+"],
-              [-7, 1, "\\"], [-6, 1, "_"], [-5, 1, "_"], [-4, 1, "/"],
-              [4, -1, "("], [5, -1, "~"], [6, -1, "~"], [7, -1, ")"],
-              [5, 0, "+"], [6, 0, "o"], [7, 0, "*"], [8, 0, ")"],
-              [4, 1, "\\"], [5, 1, "_"], [6, 1, "_"], [7, 1, "/"],
-            ];
-            for (const [ox, oy, ch] of bowSprite) {
-              putCell(
-                TIE_X + ox * s,
-                TIE_Y + oy,
-                ch,
-                samplePalette(rPal, oy === 0 ? 0.88 : 0.64),
-                0.96,
-                0.70
-              );
-            }
-
-            // Dwie miękkie wstążeczki falujące w dół
-            for (let k = 1; k <= 6; k++) {
-              const waveL = Math.sin(t * 2.0 + k * 0.52) * 0.55;
-              const waveR = Math.sin(t * 2.0 + k * 0.52 + 1.3) * 0.55;
-              putCell(TIE_X - 2.6 - k * 0.68 + waveL, TIE_Y + k, "/", samplePalette(rPal, 0.78 - k * 0.06), 0.95, 0.58);
-              putCell(TIE_X + 2.6 + k * 0.68 + waveR, TIE_Y + k, "\\", samplePalette(rPal, 0.78 - k * 0.06), 0.95, 0.58);
-            }
-          }
-        }
-      }
-
-      // 1. Rzeźbiona róża / piwonia 3D z głębokimi spiralnymi płatkami i czystą obwódką
-      function drawRose(cx, cy, radius, bloom, pal, depth, t, phase) {
-        const b = easeOutBack(bloom);
-        if (b <= 0.02) return;
-        const rMax = radius * b;
-        const ramp = RAMPS.rose;
-        const rot = Math.sin(t * 0.65 + phase) * 0.14;
-
-        const rxSpan = Math.ceil(rMax * 1.62) + 2;
-        const rySpan = Math.ceil(rMax * 0.92) + 2;
-
-        for (let dy = -rySpan; dy <= rySpan; dy++) {
-          for (let dx = -rxSpan; dx <= rxSpan; dx++) {
-            const nx = dx / (rMax * 1.44);
-            const ny = dy / (rMax * 0.79);
-            const r = Math.hypot(nx, ny);
-            if (r > 1.20) continue;
-
-            const ang = Math.atan2(ny, nx) + rot;
-            const outerLobes = 0.88 + 0.14 * Math.sin(5.0 * ang + 0.5) + 0.05 * Math.cos(10.0 * ang);
-
-            // Cienka strefa oddechu (wycina tło/łodygi za kwiatem, nie zasłania bliższych kwiatów)
-            if (r > outerLobes) {
-              if (r < outerLobes + 0.14) putMask(cx + dx, cy + dy, depth - 0.03);
-              continue;
-            }
-
-            // Wyraźne spiralne warstwy płatków z ciemnym wcięciem i rozświetlonym rantem
-            const spiralPhase = 5.0 * ang + r * 9.2 - b * 2.6;
-            const spiral = Math.sin(spiralPhase);
-            const rimHighlight = Math.pow(0.5 + 0.5 * spiral, 2.2);
-            const dome = Math.sqrt(Math.max(0, 1.06 - r * r));
-            const light = clamp(0.42 + (-nx * 0.36 - ny * 0.44 + dome * 0.52) * 0.68, 0, 1);
-            const edgeRim = smoothstep(outerLobes - 0.16, outerLobes, r) * 0.22;
-
-            let lum = clamp(0.14 + 0.52 * rimHighlight + 0.34 * light + edgeRim, 0.06, 1.0);
-            if (spiral < -0.35 && r > 0.18) lum *= 0.46; // głębokie aksamitne zagłębienie płatka
-
-            const ch = ramp[Math.min(ramp.length - 1, Math.floor(lum * (ramp.length - 1)))];
-            const color = samplePalette(pal, clamp(0.08 + lum * 0.92, 0, 1));
-            putCell(cx + dx, cy + dy, ch, color, depth + dome * 0.12, 0.34 + lum * 0.66);
-          }
-        }
-      }
-
-      // 2. Kwiat Wiśni / Kosmos (5 płatków) oraz Stokrotka / Słonecznik (8-9 smukłych płatków)
-      function drawPetaledFlower(cx, cy, radius, petals, bloom, pal, centerPal, depth, t, phase, sharp = false) {
-        const b = easeOutBack(bloom);
-        if (b <= 0.02) return;
-        const rMax = radius * b;
-        const ramp = RAMPS.petal;
-        const rot = phase * 0.65 + Math.sin(t * 0.58 + phase) * 0.12;
-
-        const rxSpan = Math.ceil(rMax * 1.68) + 2;
-        const rySpan = Math.ceil(rMax * 0.94) + 2;
-
-        for (let dy = -rySpan; dy <= rySpan; dy++) {
-          for (let dx = -rxSpan; dx <= rxSpan; dx++) {
-            const nx = dx / (rMax * 1.48);
-            const ny = dy / (rMax * 0.80);
-            const r = Math.hypot(nx, ny);
-            if (r > 1.22) continue;
-
-            const ang = Math.atan2(ny, nx) + rot;
-            const wave = Math.abs(Math.cos(petals * 0.5 * ang));
-            // Wyraźniejsze wcięcia między płatkami = natychmiast rozpoznawalny kształt kwiatu!
-            const lobe = sharp
-              ? 0.30 + 0.72 * Math.pow(wave, 1.75)
-              : 0.28 + 0.74 * Math.pow(wave, 0.85);
-
-            if (r > lobe) {
-              if (r < lobe + 0.14) putMask(cx + dx, cy + dy, depth - 0.03);
-              continue;
-            }
-
-            const centerR = sharp ? 0.32 : 0.25;
-            if (r < centerR) {
-              const dome = Math.sqrt(Math.max(0, 1 - (r / (centerR + 0.02)) ** 2));
-              const lum = clamp(0.42 + 0.58 * dome - ny * 0.18, 0.22, 1.0);
-              const ch = lum > 0.76 ? "@" : lum > 0.54 ? "0" : "o";
-              putCell(cx + dx, cy + dy, ch, samplePalette(centerPal, lum), depth + 0.16, 0.95);
-            } else {
-              const radialFrac = (r - centerR) / Math.max(0.12, lobe - centerR);
-              const vein = Math.pow(wave, 1.8);
-              const light = clamp(0.5 - nx * 0.24 - ny * 0.30, 0.16, 0.96);
-              const lum = clamp(0.22 + 0.44 * radialFrac + 0.22 * vein + 0.22 * light, 0.10, 1.0);
-              const ch = ramp[Math.min(ramp.length - 1, Math.floor(lum * (ramp.length - 1)))];
-              putCell(cx + dx, cy + dy, ch, samplePalette(pal, clamp(0.16 + lum * 0.84, 0, 1)), depth + 0.08 * (1 - radialFrac * 0.35), 0.40 + lum * 0.55);
-            }
-          }
-        }
-      }
-
-      // 3. Strzelisty kłos lawendy / chabra
-      function drawLavenderSpike(tipX, tipY, size, tilt, bloom, pal, depth, t, phase) {
-        const b = easeOutCubic(bloom);
-        if (b <= 0.02) return;
-        const ramp = RAMPS.spike;
-        const clusters = 10;
-        const len = 8.4 * size * b;
-
-        for (let i = 0; i < clusters; i++) {
-          const u = i / (clusters - 1);
-          const bx = tipX - tilt * len * u * 1.15;
-          const by = tipY + len * u * 0.90;
-          const width = (1.1 + Math.sin(u * Math.PI) * 1.95) * size * b;
-
-          for (let ox = -Math.ceil(width); ox <= Math.ceil(width); ox++) {
-            const edge = 1 - Math.abs(ox) / (width + 0.55);
-            if (edge <= 0) continue;
-            const lum = clamp(0.30 + edge * 0.50 + (1 - u) * 0.26 + Math.sin(t * 2 + i + phase) * 0.05, 0.15, 1.0);
-            const ch = ramp[Math.min(ramp.length - 1, Math.floor(lum * (ramp.length - 1)))];
-            putCell(bx + ox, by, ch, samplePalette(pal, lum), depth + edge * 0.05, 0.46 + lum * 0.44);
-          }
-        }
-      }
-
-      function renderScene(t) {
-        clearBuffers();
-
-        // 1. Gwiazdy w tle
-        for (const s of STARS) {
-          const tw = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
-          if (tw > 0.25) {
-            const a = Math.round(52 + tw * 105);
-            const col = s.tint < 0.5 ? `rgb(${a},${Math.round(a * 0.92)},${Math.min(255, a + 45)})` : `rgb(${Math.min(255, a + 35)},${Math.round(a * 0.86)},${a})`;
-            putCell(s.x, s.y, tw > 0.85 ? "+" : s.ch, col, -5, 0.2);
-          }
-        }
-
-        // 2. Gałązki eukaliptusa po bokach
-        for (const f of FOLIAGE) {
-          drawFoliage(f, t);
-        }
-
-        // 3. Łodygi wszystkich kwiatów
-        for (const fl of FLOWERS) {
-          const stemGrow = easeOutCubic((t - fl.delay * 0.42) / 1.25);
-          const ctrlX = lerp(TIE_X, fl.x, 0.48) + (fl.x - TIE_X) * 0.12;
-          const ctrlY = lerp(TIE_Y, fl.y, 0.58) + 2.6;
-          const targetY = fl.type === "lavender" ? fl.y + 5.6 * fl.size : fl.y + 1.2;
-          const targetX = fl.type === "lavender" ? fl.x - fl.tilt * 5.2 : fl.x;
-          drawStem(TIE_X, TIE_Y, ctrlX, ctrlY, targetX, targetY, stemGrow, fl.depth - 0.18, t, fl.phase, fl.type === "rose");
-        }
-
-        // 4. Owijka z papieru i kokarda
-        drawWrapAndRibbon(t);
-
-        // 5. Gipsówka w prześwitach
-        for (const b of BABYS_BREATH) {
-          const g = smoothstep(b.delay, b.delay + 0.9, t);
-          if (g <= 0.05) continue;
-          const bx = b.x + windOffset(b.y, t, b.phase);
-          const pulse = 0.65 + 0.35 * Math.sin(t * 2.2 + b.phase);
-          const col = b.warm ? mixColor([180, 190, 230], [255, 246, 224], pulse * g) : mixColor([145, 180, 238], [248, 252, 255], pulse * g);
-          putCell(bx, b.y, b.ch, col, 0.32, 0.65 * g);
-        }
-
-        // 6. Kwiaty
-        for (const fl of FLOWERS) {
-          const bloom = clamp((t - fl.delay) / 1.45, 0, 1);
-          if (bloom <= 0.01) continue;
-          const fx = fl.x + windOffset(fl.y, t, fl.phase);
-          const fy = fl.y + Math.sin(t * 1.4 + fl.phase) * 0.18;
-
-          if (fl.type === "rose") {
-            drawRose(fx, fy, fl.size, bloom, PALETTES[fl.pal], fl.depth, t, fl.phase);
-          } else if (fl.type === "lavender") {
-            drawLavenderSpike(fx, fy, fl.size, fl.tilt, bloom, PALETTES[fl.pal], fl.depth, t, fl.phase);
-          } else if (fl.type === "sunflower" || fl.type === "daisy") {
-            drawPetaledFlower(fx, fy, fl.size, fl.petals, bloom, PALETTES[fl.pal], PALETTES[fl.centerPal], fl.depth, t, fl.phase, true);
-          } else {
-            drawPetaledFlower(fx, fy, fl.size, fl.petals, bloom, PALETTES[fl.pal], PALETTES[fl.centerPal], fl.depth, t, fl.phase, false);
-          }
-        }
-
-        // 7. Cząsteczki (serduszka w ramie bukietu + iskierki + płatki)
-        for (const p of particles) {
-          const vis = smoothstep(p.appear, p.appear + 1.3, t);
-          if (vis <= 0.05) continue;
-          const fadeOut = p.ephemeral ? 1 - smoothstep(p.life * 0.65, p.life, p.age) : 1;
-          if (fadeOut <= 0.05) continue;
-
-          const px = p.x + Math.sin(t * p.sway + p.phase) * 1.3;
-          const py = p.y;
-          // Nie rysuj dużych serduszek bezpośrednio na kwiatach (tylko w ramie wokół bukietu)
-          if (!p.ephemeral && (p.kind === "bigHeart" || p.kind === "midHeart") && inBouquetCrown(px, py)) {
-            continue;
-          }
-
-          const glow = (0.55 + 0.45 * Math.sin(t * 3.0 + p.phase)) * vis * fadeOut;
-
-          if (p.kind === "bigHeart") {
-            putSprite(px, py, BIG_HEART, p.color, 1.25, glow * 0.90);
-          } else if (p.kind === "midHeart") {
-            putSprite(px, py, MID_HEART, p.color, 1.24, glow * 0.85);
-          } else if (p.kind === "miniHeart") {
-            putCell(px - 0.5, py, "<", p.color, 1.26, glow);
-            putCell(px + 0.5, py, "3", p.color, 1.26, glow);
-          } else if (p.kind === "burst") {
-            putSprite(px, py, SPARKLE_BURST, p.color, 1.22, glow * 0.95);
-          } else if (p.kind === "petal") {
-            const ch = Math.sin(t * 4 + p.phase) > 0 ? "~" : "*";
-            putCell(px, py, ch, p.color, 1.23, glow * 0.78);
-          } else {
-            const ch = glow > 0.65 ? "+" : "·";
-            putCell(px, py, ch, p.color, 1.20, glow);
-          }
-        }
-      }
-
-      // =========================================================================
-      // Dedykacja u dołu — krystalicznie czytelna zarówno na telefonie jak i PC
-      // =========================================================================
-      function drawDedicationOverlay(targetCtx, t, isGlowLayer) {
-        const textStart = 2.45;
-        const typeProg = clamp((t - textStart) / 1.85, 0, 1);
-        if (typeProg <= 0) return;
-
-        const { w, offsetY, cellH, isMobile } = layout;
-        const cx = w * 0.5;
-        const sepY = offsetY + 52.8 * cellH;
-        const textY = offsetY + (isMobile ? 56.2 : 55.8) * cellH;
-        const subY = offsetY + (isMobile ? 59.0 : 58.3) * cellH;
-
-        const sepSize = clamp(isMobile ? w * 0.030 : cellH * 1.05, 11, 18);
-        const titleSize = clamp(isMobile ? w * 0.048 : cellH * 1.48, 15, 28);
-
-        targetCtx.textAlign = "center";
-        targetCtx.textBaseline = "middle";
-
-        // 1. Ozdobny separator
-        const sepReveal = smoothstep(textStart - 0.25, textStart + 0.75, t);
-        if (sepReveal > 0.1) {
-          targetCtx.font = `500 ${sepSize.toFixed(1)}px ${FONT_STACK}`;
-          targetCtx.save();
-          targetCtx.globalAlpha = sepReveal * (isGlowLayer ? 0.85 : 0.95);
-          targetCtx.fillStyle = "#c97ca0";
-          targetCtx.fillText("· · ─ ─     ─ ─ · ·", cx, sepY);
-          targetCtx.fillStyle = "#ffe59c";
-          targetCtx.fillText("✦", cx, sepY);
-          targetCtx.restore();
-        }
-
-        // 2. Napis pisany literka po literce + pulsujące <3
-        const fullText = DEDICATION;
-        const shownCount = Math.floor(fullText.length * typeProg + 0.001);
-        const shown = fullText.slice(0, shownCount);
-        const done = typeProg >= 1;
-
-        targetCtx.font = `600 ${titleSize.toFixed(1)}px ${FONT_STACK}`;
-
-        // Delikatny różowo-złoty gradient wzdłuż napisu
-        const grad = targetCtx.createLinearGradient(cx - titleSize * 7, textY, cx + titleSize * 7, textY);
-        const shift = 0.5 + 0.5 * Math.sin(t * 1.8);
-        grad.addColorStop(0, mixColor([255, 174, 210], [255, 224, 200], shift));
-        grad.addColorStop(0.5, "#fff5f9");
-        grad.addColorStop(1, mixColor([255, 224, 200], [255, 174, 210], shift));
-
-        const cursor = !done && Math.floor(t * 6) % 2 === 0 ? "_" : "";
-        const displayMain = done ? `${fullText}   ` : `${shown}${cursor}`;
-        targetCtx.fillStyle = grad;
-        targetCtx.fillText(displayMain, cx, textY);
-
-        if (done) {
-          const textMetrics = targetCtx.measureText(fullText);
-          const heartX = cx + textMetrics.width * 0.5 + titleSize * 0.75;
-          const pulse = 0.5 + 0.5 * Math.sin(t * 4.2);
-          targetCtx.fillStyle = mixColor([255, 84, 146], [255, 204, 226], pulse);
-          targetCtx.fillText("<3", heartX, textY);
-
-          const subFade = smoothstep(textStart + 1.85, textStart + 2.75, t);
-          if (subFade > 0.1 && !isGlowLayer) {
-            targetCtx.save();
-            targetCtx.globalAlpha = 0.45 * subFade;
-            targetCtx.font = `400 ${Math.max(10, sepSize * 0.85).toFixed(1)}px ${FONT_STACK}`;
-            targetCtx.fillStyle = "#ffc4df";
-            targetCtx.fillText("·  ·  ·", cx, subY);
-            targetCtx.restore();
-          }
-        }
-      }
-
-      // =========================================================================
-      // Responsywny layout (pełna panorama na PC + inteligentne kadrowanie na telefon!)
-      // =========================================================================
-      let layout = {
-        dpr: 1,
-        w: 800,
-        h: 600,
-        isMobile: false,
-        fontSize: 12,
-        cellW: 7,
-        cellH: 12,
-        offsetX: 0,
-        offsetY: 0,
-        colMin: 0,
-        colMax: COLS,
-      };
+      let simTime = FORCE_TIME !== null && Number.isFinite(FORCE_TIME) ? FORCE_TIME : 0;
+      let yaw = FORCE_YAW !== null && Number.isFinite(FORCE_YAW) ? FORCE_YAW : 0.22;
+      let pitch = 0.35; // widok lekko z góry, eksponujący rozkwitłe spirale róż i głębię 3D!
+      let yawVel = 0;
+      let pitchVel = 0;
+      let dragging = false;
+      let lastPtrX = 0;
+      let lastPtrY = 0;
+      let dragDist = 0;
+
+      // Opcjonalny efekt „pył” (rozproszenie jak finał bloom3d.py i powrót do bukietu)
+      let disperseTimer = -1;
+      const DISPERSE_DURATION = 5.4;
+
+      let layout = { dpr: 1, w: 1280, h: 800, isMobile: false, fontSize: 10, cellW: 6, cellH: 10, offsetX: 0, offsetY: 0 };
 
       function resize() {
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -947,39 +907,353 @@
         crispCanvas.width = canvas.width;
         crispCanvas.height = canvas.height;
 
-        const glowScale = 0.5;
+        const glowScale = 0.48;
         glowCanvas.width = Math.max(1, Math.round(w * dpr * glowScale));
         glowCanvas.height = Math.max(1, Math.round(h * dpr * glowScale));
 
-        // Na wąskim telefonie przybliżamy kadr wokół bukietu (kolumny 17..99), żeby kwiaty były duże i ostre!
-        const visibleCols = isMobile ? 84 : COLS;
-        const colMin = Math.floor((COLS - visibleCols) * 0.5);
-        const colMax = colMin + visibleCols;
-
-        const padX = isMobile ? 6 : 24;
-        const padY = isMobile ? 22 : 18;
-        const maxCellW = (w - padX * 2) / visibleCols;
-        const maxCellH = (h - padY * 2) / (ROWS + 1);
-
-        const cellH = Math.max(6.5, Math.min(maxCellH, maxCellW / CELL_RATIO));
+        // Dopasowanie gęstości siatki do ekranu (ultra-gęsty hologram na PC, ostry i wyraźny na telefonie)
+        const targetCellH = isMobile ? clamp(w / 52, 7.2, 9.4) : clamp(h / 78, 9.5, 13.0);
+        const cellH = targetCellH;
         const cellW = cellH * CELL_RATIO;
-        const fontSize = cellH * 1.04;
+        const cols = Math.max(66, Math.min(180, Math.floor((w - 12) / cellW)));
+        const rows = Math.max(52, Math.min(104, Math.floor((h - 14) / cellH)));
 
-        const gridW = cellW * visibleCols;
-        const gridH = cellH * ROWS;
-        // Przesunięcie bazowe tak, by środek bukietu (TIE_X) był idealnie na środku ekranu
-        const offsetX = (w - gridW) * 0.5 - colMin * cellW;
-        const offsetY = (h - gridH) * 0.5 - (isMobile ? cellH * 0.6 : 0);
+        if (cols !== COLS || rows !== ROWS) {
+          allocGrid(cols, rows);
+        }
 
-        layout = { dpr, w, h, isMobile, fontSize, cellW, cellH, offsetX, offsetY, colMin, colMax };
+        const gridW = cols * cellW;
+        const gridH = rows * cellH;
+        layout = {
+          dpr,
+          w,
+          h,
+          isMobile,
+          fontSize: cellH * 1.05,
+          cellW,
+          cellH,
+          offsetX: (w - gridW) * 0.5,
+          offsetY: (h - gridH) * 0.5,
+        };
 
-        // Natychmiastowe przerysowanie (kluczowe przy zmianie rozmiaru / obrotu telefonu)
-        renderScene(simTime);
+        render3D(simTime);
         paintFrame();
       }
 
+      // =========================================================================
+      // Główny potok renderowania 3D -> Z-buffer ASCII + Oświetlenie Blinn-Phong
+      // =========================================================================
+      function render3D(t) {
+        const n = COLS * ROWS;
+        bufChar.fill(" ");
+        bufZ.fill(0);
+        bufGlow.fill(0);
+
+        // 1. Subtelne gwiazdy w tle
+        const starColBase = PAL_ID.creamPearl * PAL_STEPS;
+        for (const st of bgStars) {
+          const tw = 0.5 + 0.5 * Math.sin(t * st.speed + st.phase);
+          if (tw > 0.42) {
+            const c = Math.floor(st.u * COLS);
+            const r = Math.floor(st.v * ROWS);
+            const idx = r * COLS + c;
+            bufChar[idx] = tw > 0.88 ? "+" : ".";
+            bufColIdx[idx] = starColBase + Math.floor(5 + tw * 14);
+            bufZ[idx] = 0.001;
+            bufGlow[idx] = tw > 0.85 ? 1 : 0;
+          }
+        }
+
+        // Postęp rozproszenia w pył (0 = pełny bukiet, 1 = chmura gwiezdna)
+        let disperseAmt = 0;
+        if (disperseTimer >= 0) {
+          const p = disperseTimer / DISPERSE_DURATION;
+          if (p < 0.45) {
+            disperseAmt = smoothstep(0, 0.45, p);
+          } else if (p < 0.58) {
+            disperseAmt = 1.0;
+          } else {
+            disperseAmt = 1.0 - smoothstep(0.58, 1.0, p);
+          }
+        }
+
+        // Macierz obrotu 3D (Yaw wokół Y, potem Pitch wokół X)
+        const cy = Math.cos(yaw), sy = Math.sin(yaw);
+        const cp = Math.cos(pitch), sp = Math.sin(pitch);
+
+        // R = Rx(pitch) * Ry(yaw)
+        const m00 = cy,        m01 = 0,   m02 = sy;
+        const m10 = sp * sy,   m11 = cp,  m12 = -sp * cy;
+        const m20 = -cp * sy,  m21 = sp,  m22 = cp * cy;
+
+        // Dwa źródła światła: główne kluczowe (góra-lewo-przód) + ciepłe konturowe (prawo-tył)
+        const lx1 = -0.45, ly1 = 0.68, lz1 = 0.58;
+        const lx2 =  0.66, ly2 = 0.34, lz2 = -0.67;
+        // Wektor połówkowy Blinna-Phonga (widok = (0, 0, 1))
+        let hx = lx1, hy = ly1, hz = lz1 + 1.0;
+        const hl = Math.hypot(hx, hy, hz);
+        hx /= hl; hy /= hl; hz /= hl;
+
+        // Parametry kamery i kadrowania (dopasowane pod pełny, bujny 3D bukiet + dedykacja u dołu)
+        const camDist = 11.8;
+        const usableH = ROWS * 0.86;
+        const baseDim = Math.min(COLS * CELL_RATIO * 0.90, usableH);
+        const scaleY = baseDim * 1.10;
+        const scaleX = scaleY / CELL_RATIO;
+        const cx = COLS * 0.5;
+        const cyScreen = ROWS * (layout.isMobile ? 0.45 : 0.465);
+
+        // Delikatny, naturalny oddech bukietu
+        const breathe = Math.sin(t * 1.25) * 0.035;
+        const globalRise = smoothstep(0.0, 0.55, t);
+
+        // Pętla po wszystkich ~27k punktach 3D (cache-friendly, bez alokacji obiektów!)
+        for (let i = 0; i < vertCount; i++) {
+          const delay = vDelay[i];
+          if (t < delay) continue;
+
+          const rawProg = (t - delay) / vDur[i];
+          const prog = rawProg >= 1 ? 1 : vKind[i] === 1 ? easeOutBack(rawProg) : easeOutCubic(rawProg);
+
+          let x = vBx[i] + (vFx[i] - vBx[i]) * prog;
+          let y = vBy[i] + (vFy[i] - vBy[i]) * prog;
+          let z = vBz[i] + (vFz[i] - vBz[i]) * prog;
+
+          // Delikatne kołysanie korony na wietrze (większe u góry bukietu)
+          const hNorm = y > -2.2 ? (y + 2.2) * 0.16 : 0;
+          x += breathe * hNorm * hNorm * Math.cos(t * 1.1 + z * 0.7);
+          z += breathe * hNorm * hNorm * Math.sin(t * 0.9 + x * 0.7);
+
+          // Opcjonalne rozproszenie w wirującą galaktykę cząsteczek 3D!
+          if (disperseAmt > 0.001) {
+            const swirl = disperseAmt * 2.2;
+            const cs = Math.cos(swirl), ss = Math.sin(swirl);
+            const dx = vDx[i] * disperseAmt;
+            const dy = vDy[i] * disperseAmt;
+            const dz = vDz[i] * disperseAmt;
+            x = (x + dx) * cs - (z + dz) * ss;
+            z = (x + dx) * ss + (z + dz) * cs;
+            y += dy;
+          }
+
+          // Skalowanie wejściowe z iskierki światła w pierwszych 0.55 s
+          if (globalRise < 0.999) {
+            const s0 = 0.15 + 0.85 * globalRise;
+            x *= s0;
+            y = lerp(-0.5, y, s0);
+            z *= s0;
+          }
+
+          // Obrót 3D + rzut perspektywiczny
+          const rz = m20 * x + m21 * y + m22 * z;
+          const dzCam = camDist - rz;
+          if (dzCam <= 1.2) continue;
+          const invZ = 1.0 / dzCam;
+
+          const rx = m00 * x + m01 * y + m02 * z;
+          const ry = m10 * x + m11 * y + m12 * z;
+
+          const sx = (cx + rx * scaleX * invZ) | 0;
+          if (sx < 0 || sx >= COLS) continue;
+          const sy = (cyScreen - ry * scaleY * invZ) | 0;
+          if (sy < 0 || sy >= ROWS - 6) continue;
+
+          const idx = sy * COLS + sx;
+          if (invZ <= bufZ[idx]) continue;
+          bufZ[idx] = invZ;
+
+          // Obrót normalnej 3D + dwustronne oświetlenie płatków (żeby tył płatków też pięknie świecił!)
+          let nx = m00 * vNx[i] + m01 * vNy[i] + m02 * vNz[i];
+          let ny = m10 * vNx[i] + m11 * vNy[i] + m12 * vNz[i];
+          let nz = m20 * vNx[i] + m21 * vNy[i] + m22 * vNz[i];
+          let backTint = 1.0;
+          if (nz < 0) {
+            nx = -nx;
+            ny = -ny;
+            nz = -nz;
+            backTint = 0.84;
+          }
+
+          let diff1 = nx * lx1 + ny * ly1 + nz * lz1;
+          if (diff1 < 0) diff1 = 0;
+          let diff2 = nx * lx2 + ny * ly2 + nz * lz2;
+          if (diff2 < 0) diff2 = 0;
+
+          const spDot = nx * hx + ny * hy + nz * hz;
+          const spec = spDot > 0 ? Math.pow(spDot, 10) * 0.55 : 0;
+
+          // Efekt Fresnela (świetlista krawędź na wygiętych płatkach 3D!)
+          const rim = (1.0 - nz) * (1.0 - nz) * 0.34;
+
+          // Perspektywa głębi + mocne, świetliste oświetlenie holograficzne 3D
+          const depthCue = clamp((invZ - 0.064) * 26.0, 0.48, 1.15);
+
+          const base = vBaseShade[i];
+          let lum = (0.24 + 0.58 * diff1 + 0.28 * diff2 + spec + rim) * (0.46 + 0.54 * base) * backTint * depthCue;
+          if (disperseAmt > 0.05) lum = Math.min(1.0, lum + disperseAmt * 0.25);
+          lum = clamp(lum, 0.12, 1.0);
+
+          const cIdx = Math.min(RAMP_MAX, Math.max(1, (lum * RAMP_MAX + 0.5) | 0));
+          bufChar[idx] = RAMP[cIdx];
+
+          const palT = clamp(base * 0.54 + lum * 0.50 + spec * 0.32, 0.10, 0.999);
+          bufColIdx[idx] = vPal[i] * PAL_STEPS + ((palT * (PAL_STEPS - 1)) | 0);
+          bufGlow[idx] = (vGlowFlag[i] && lum > 0.36) || spec > 0.14 || disperseAmt > 0.25 ? 1 : 0;
+        }
+
+        // 2. Orbitujące cząsteczki 3D (przelatują zarówno PRZED jak i ZA bukietem dzięki Z-buforowi!)
+        for (const o of orbiters) {
+          if (t < o.appear) continue;
+          const fade = smoothstep(o.appear, o.appear + 1.1, t);
+          const ang = o.angle + t * o.speed;
+          const ox = Math.cos(ang) * o.radius;
+          const oy = o.yBase + Math.sin(t * 1.3 + o.phase) * o.yAmp;
+          const oz = Math.sin(ang) * o.radius;
+
+          const rz = m20 * ox + m21 * oy + m22 * oz;
+          const dzCam = camDist - rz;
+          if (dzCam <= 1.2) continue;
+          const invZ = 1.0 / dzCam;
+          const rx = m00 * ox + m01 * oy + m02 * oz;
+          const ry = m10 * ox + m11 * oy + m12 * oz;
+
+          const sx = (cx + rx * scaleX * invZ) | 0;
+          const sy = (cyScreen - ry * scaleY * invZ) | 0;
+          if (sx < 2 || sx >= COLS - 2 || sy < 2 || sy >= ROWS - 8) continue;
+
+          const idx = sy * COLS + sx;
+          if (invZ <= bufZ[idx]) continue;
+
+          const pulse = 0.5 + 0.5 * Math.sin(t * 3.1 + o.phase);
+          const shade = clamp(Math.floor(o.shade * (0.65 + 0.35 * pulse) * fade), 4, PAL_STEPS - 1);
+          const colIdx = o.pal * PAL_STEPS + shade;
+
+          if (o.kind === "heart") {
+            bufZ[idx] = invZ;
+            bufChar[idx] = "<";
+            bufColIdx[idx] = colIdx;
+            bufGlow[idx] = 1;
+            const idx2 = idx + 1;
+            if (invZ > bufZ[idx2]) {
+              bufZ[idx2] = invZ;
+              bufChar[idx2] = "3";
+              bufColIdx[idx2] = colIdx;
+              bufGlow[idx2] = 1;
+            }
+          } else if (o.kind === "petal") {
+            bufZ[idx] = invZ;
+            bufChar[idx] = pulse > 0.5 ? "~" : "*";
+            bufColIdx[idx] = colIdx;
+            bufGlow[idx] = 1;
+          } else {
+            bufZ[idx] = invZ;
+            bufChar[idx] = pulse > 0.62 ? "+" : "·";
+            bufColIdx[idx] = colIdx;
+            bufGlow[idx] = pulse > 0.5 ? 1 : 0;
+          }
+        }
+
+        // 3. Cząsteczki po kliknięciu
+        for (const b of bursts) {
+          const fade = 1 - smoothstep(b.life * 0.55, b.life, b.age);
+          if (fade <= 0.05) continue;
+          const rz = m20 * b.x + m21 * b.y + m22 * b.z;
+          const dzCam = camDist - rz;
+          if (dzCam <= 1.2) continue;
+          const invZ = 1.0 / dzCam;
+          const rx = m00 * b.x + m01 * b.y + m02 * b.z;
+          const ry = m10 * b.x + m11 * b.y + m12 * b.z;
+
+          const sx = (cx + rx * scaleX * invZ) | 0;
+          const sy = (cyScreen - ry * scaleY * invZ) | 0;
+          if (sx < 1 || sx >= COLS - 2 || sy < 1 || sy >= ROWS - 7) continue;
+
+          const idx = sy * COLS + sx;
+          if (invZ <= bufZ[idx]) continue;
+          const colIdx = b.pal * PAL_STEPS + clamp(Math.floor((0.45 + 0.55 * fade) * (PAL_STEPS - 1)), 4, PAL_STEPS - 1);
+          if (b.kind === "heart") {
+            bufZ[idx] = invZ; bufChar[idx] = "<"; bufColIdx[idx] = colIdx; bufGlow[idx] = 1;
+            bufZ[idx + 1] = invZ; bufChar[idx + 1] = "3"; bufColIdx[idx + 1] = colIdx; bufGlow[idx + 1] = 1;
+          } else {
+            bufZ[idx] = invZ; bufChar[idx] = b.kind === "petal" ? "*" : "+"; bufColIdx[idx] = colIdx; bufGlow[idx] = 1;
+          }
+        }
+      }
+
+      // =========================================================================
+      // Dedykacja u dołu („Dla Kochanej Wiktorii <3”) — świecąca i super czytelna
+      // =========================================================================
+      function drawDedicationOverlay(targetCtx, t, isGlowLayer) {
+        const textStart = 2.15;
+        const typeProg = clamp((t - textStart) / 1.8, 0, 1);
+        if (typeProg <= 0) return;
+
+        const { w, h, isMobile } = layout;
+        const cx = w * 0.5;
+        const sepY = h - (isMobile ? 96 : 86);
+        const textY = h - (isMobile ? 64 : 52);
+        const subY = h - (isMobile ? 40 : 28);
+
+        const sepSize = clamp(isMobile ? w * 0.030 : 13, 11, 15);
+        const titleSize = clamp(isMobile ? w * 0.048 : Math.min(w * 0.022, 26), 16, 26);
+
+        targetCtx.textAlign = "center";
+        targetCtx.textBaseline = "middle";
+
+        const sepReveal = smoothstep(textStart - 0.25, textStart + 0.75, t);
+        if (sepReveal > 0.1) {
+          targetCtx.font = `500 ${sepSize.toFixed(1)}px ${FONT_STACK}`;
+          targetCtx.save();
+          targetCtx.globalAlpha = sepReveal * (isGlowLayer ? 0.85 : 0.95);
+          targetCtx.fillStyle = "#c97ca0";
+          targetCtx.fillText("· · ─ ─     ─ ─ · ·", cx, sepY);
+          targetCtx.fillStyle = "#ffe59c";
+          targetCtx.fillText("✦", cx, sepY);
+          targetCtx.restore();
+        }
+
+        const fullText = DEDICATION;
+        const shownCount = Math.floor(fullText.length * typeProg + 0.001);
+        const shown = fullText.slice(0, shownCount);
+        const done = typeProg >= 1;
+
+        targetCtx.font = `600 ${titleSize.toFixed(1)}px ${FONT_STACK}`;
+
+        const grad = targetCtx.createLinearGradient(cx - titleSize * 7, textY, cx + titleSize * 7, textY);
+        const shift = 0.5 + 0.5 * Math.sin(t * 1.8);
+        grad.addColorStop(0, mixColorStr([255, 170, 208], [255, 224, 198], shift));
+        grad.addColorStop(0.5, "#fff5fa");
+        grad.addColorStop(1, mixColorStr([255, 224, 198], [255, 170, 208], shift));
+
+        const cursor = !done && Math.floor(t * 6) % 2 === 0 ? "_" : "";
+        const displayMain = done ? `${fullText}   ` : `${shown}${cursor}`;
+        targetCtx.fillStyle = grad;
+        targetCtx.fillText(displayMain, cx, textY);
+
+        if (done) {
+          const metrics = targetCtx.measureText(fullText);
+          const heartX = cx + metrics.width * 0.5 + titleSize * 0.78;
+          const pulse = 0.5 + 0.5 * Math.sin(t * 4.2);
+          targetCtx.fillStyle = mixColorStr([255, 78, 144], [255, 206, 228], pulse);
+          targetCtx.fillText("<3", heartX, textY);
+
+          const subFade = smoothstep(textStart + 1.8, textStart + 2.7, t);
+          if (subFade > 0.1 && !isGlowLayer) {
+            targetCtx.save();
+            targetCtx.globalAlpha = 0.45 * subFade;
+            targetCtx.font = `400 ${Math.max(10, sepSize * 0.85).toFixed(1)}px ${FONT_STACK}`;
+            targetCtx.fillStyle = "#ffc4df";
+            targetCtx.fillText("·  ·  ·", cx, subY);
+            targetCtx.restore();
+          }
+        }
+      }
+
+      // =========================================================================
+      // Dwuwarstwowy render na Canvas: krystaliczne znaki + filmowa poświata bloom
+      // =========================================================================
       function paintFrame() {
-        const { dpr, w, h, fontSize, cellW, cellH, offsetX, offsetY, colMin, colMax } = layout;
+        const { dpr, w, h, fontSize, cellW, cellH, offsetX, offsetY } = layout;
 
         crispCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
         crispCtx.clearRect(0, 0, w, h);
@@ -994,134 +1268,163 @@
         glowCtx.textAlign = "center";
         glowCtx.textBaseline = "middle";
 
-        let lastCrispCol = "";
-        let lastGlowCol = "";
+        let lastCrispCol = -1;
+        let lastGlowCol = -1;
 
         for (let r = 0; r < ROWS; r++) {
           const py = offsetY + (r + 0.5) * cellH;
           const rowOff = r * COLS;
-          for (let c = colMin; c < colMax; c++) {
+          for (let c = 0; c < COLS; c++) {
             const idx = rowOff + c;
             const ch = bufChar[idx];
             if (ch === " ") continue;
-            const col = bufColor[idx];
+            const colIdx = bufColIdx[idx];
             const px = offsetX + (c + 0.5) * cellW;
 
-            if (col !== lastCrispCol) {
-              crispCtx.fillStyle = col;
-              lastCrispCol = col;
+            if (colIdx !== lastCrispCol) {
+              crispCtx.fillStyle = COLOR_LUT[colIdx];
+              lastCrispCol = colIdx;
             }
             crispCtx.fillText(ch, px, py);
 
-            if (bufGlow[idx] > 0.34) {
-              if (col !== lastGlowCol) {
-                glowCtx.fillStyle = col;
-                lastGlowCol = col;
+            if (bufGlow[idx]) {
+              if (colIdx !== lastGlowCol) {
+                glowCtx.fillStyle = COLOR_LUT[colIdx];
+                lastGlowCol = colIdx;
               }
               glowCtx.fillText(ch, px, py);
             }
           }
         }
 
-        // Dedykacja na obu warstwach (ostra + delikatny bloom)
         drawDedicationOverlay(crispCtx, simTime, false);
         drawDedicationOverlay(glowCtx, simTime, true);
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, w, h);
 
+        // Filmowy dwupasmowy bloom (jak w bloom3d.py z addytywnym mieszaniem)
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = 0.40;
-        ctx.filter = "blur(9px)";
+        ctx.globalAlpha = 0.52;
+        ctx.filter = "blur(11px)";
         ctx.drawImage(glowCanvas, 0, 0, w, h);
 
-        ctx.globalAlpha = 0.54;
-        ctx.filter = "blur(2.8px)";
+        ctx.globalAlpha = 0.66;
+        ctx.filter = "blur(3.2px)";
         ctx.drawImage(glowCanvas, 0, 0, w, h);
         ctx.restore();
 
         ctx.drawImage(crispCanvas, 0, 0, w, h);
       }
 
-      function updateParticles(dt) {
-        for (let i = particles.length - 1; i >= 0; i--) {
-          const p = particles[i];
-          p.age += dt;
-          if (simTime < p.appear) continue;
-
-          p.x += (p.vx + windCurrent * 2.0) * dt;
-          p.y += p.vy * dt;
-
-          if (p.ephemeral) {
-            p.vx *= 0.985;
-            if (p.age >= p.life) {
-              particles.splice(i, 1);
-            }
-          } else if (p.y < -4 || p.x < -8 || p.x > COLS + 8) {
-            const fresh = spawnParticle(false, null, null, p.kind);
-            fresh.appear = 0;
-            fresh.y = ROWS - 6 + rand() * 5;
-            particles[i] = fresh;
-          }
-        }
-      }
-
-      function triggerBurst(clientX, clientY) {
-        const gx = (clientX - layout.offsetX) / layout.cellW;
-        const gy = (clientY - layout.offsetY) / layout.cellH;
-        for (let i = 0; i < 9; i++) {
-          if (particles.length < 80) {
-            const k = i < 3 ? "miniHeart" : i < 7 ? "petal" : "spark";
-            particles.push(spawnParticle(true, clamp(gx, 10, COLS - 10), clamp(gy, 8, ROWS - 10), k));
-          }
-        }
+      // =========================================================================
+      // Interakcja 3D (obrót myszką/palcem z bezwładnością + kliknięcie)
+      // =========================================================================
+      canvas.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        dragDist = 0;
+        lastPtrX = e.clientX;
+        lastPtrY = e.clientY;
+        canvas.classList.add("dragging");
+        canvas.setPointerCapture(e.pointerId);
         const hint = document.getElementById("hint");
         if (hint) hint.style.opacity = "0";
+      });
+
+      canvas.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - lastPtrX;
+        const dy = e.clientY - lastPtrY;
+        dragDist += Math.hypot(dx, dy);
+        lastPtrX = e.clientX;
+        lastPtrY = e.clientY;
+
+        yaw += dx * 0.0085;
+        pitch = clamp(pitch + dy * 0.006, -0.45, 0.85);
+        yawVel = dx * 0.0055;
+        pitchVel = dy * 0.003;
+      });
+
+      function endDrag(e) {
+        if (!dragging) return;
+        dragging = false;
+        canvas.classList.remove("dragging");
+        if (dragDist < 8) {
+          // Krótkie kliknięcie/dotknięcie uwalnia chmurę płatków i <3 w 3D
+          spawnClickBurst((rand() - 0.5) * 1.4, 1.4 + rand() * 0.8, (rand() - 0.5) * 1.4);
+        }
+        try {
+          canvas.releasePointerCapture(e.pointerId);
+        } catch (_) {}
       }
 
-      window.addEventListener("pointermove", (e) => {
-        pointerActive = true;
-        windTarget = (e.clientX / Math.max(1, window.innerWidth) - 0.5) * 1.4;
-      });
-
-      window.addEventListener("pointerleave", () => {
-        pointerActive = false;
-        windTarget = 0;
-      });
-
-      canvas.addEventListener("pointerdown", (e) => {
-        windTarget = (e.clientX / Math.max(1, window.innerWidth) - 0.5) * 1.8;
-        triggerBurst(e.clientX, e.clientY);
-      });
+      canvas.addEventListener("pointerup", endDrag);
+      canvas.addEventListener("pointercancel", endDrag);
 
       document.getElementById("replayBtn").addEventListener("click", (e) => {
         e.stopPropagation();
         simTime = 0;
-        initParticles();
+        disperseTimer = -1;
+        yaw = 0.22;
+        pitch = 0.35;
+      });
+
+      document.getElementById("disperseBtn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (disperseTimer < 0) disperseTimer = 0;
       });
 
       window.addEventListener("resize", resize);
-      if (FORCE_TIME !== null && Number.isFinite(FORCE_TIME)) {
-        simTime = FORCE_TIME;
-      }
       resize();
 
+      let lastTs = performance.now();
       function tick(now) {
-        const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTs) / 1000));
-        lastFrameTs = now;
+        const dt = Math.min(0.05, Math.max(0.001, (now - lastTs) / 1000));
+        lastTs = now;
 
         if (FORCE_TIME !== null && Number.isFinite(FORCE_TIME)) {
           simTime = FORCE_TIME;
-          renderScene(simTime);
+          if (FORCE_YAW !== null && Number.isFinite(FORCE_YAW)) yaw = FORCE_YAW;
+          render3D(simTime);
           paintFrame();
           return;
         }
 
         simTime += dt;
-        windCurrent += ((pointerActive ? windTarget : 0) - windCurrent) * Math.min(1, dt * 3.5);
-        updateParticles(dt);
-        renderScene(simTime);
+
+        // Płynny, hipnotyczny obrót 360° + wygaszanie bezwładności po przeciągnięciu
+        if (!dragging) {
+          yaw += (0.42 + yawVel * 8.0) * dt;
+          yawVel *= Math.pow(0.06, dt);
+          pitch += pitchVel * 6.0 * dt;
+          pitchVel *= Math.pow(0.05, dt);
+          // Łagodny powrót pochylenia do optymalnego widoku kopuły 3D
+          const targetPitch = 0.35 + Math.sin(simTime * 0.55) * 0.08;
+          pitch += (targetPitch - pitch) * Math.min(1, dt * 1.1);
+        }
+
+        if (disperseTimer >= 0) {
+          disperseTimer += dt;
+          if (disperseTimer >= DISPERSE_DURATION) {
+            disperseTimer = -1;
+          }
+        }
+
+        // Aktualizacja cząsteczek po kliknięciu
+        for (let i = bursts.length - 1; i >= 0; i--) {
+          const b = bursts[i];
+          b.age += dt;
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          b.z += b.vz * dt;
+          b.vx *= 0.98;
+          b.vz *= 0.98;
+          b.vy -= 0.45 * dt;
+          if (b.age >= b.life) bursts.splice(i, 1);
+        }
+
+        render3D(simTime);
         paintFrame();
         requestAnimationFrame(tick);
       }
